@@ -1,0 +1,6 @@
+name: torsomaxsat
+
+dependencies:
+  - pygmo
+  - networkx
+  - pyscipopt
