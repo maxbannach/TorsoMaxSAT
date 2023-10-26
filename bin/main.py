@@ -1,6 +1,11 @@
 import sys, argparse, time
-from pysat.formula import WCNF
 
+import gurobipy as gp
+from gurobipy import GRB
+
+import pyscipopt as scip
+
+from pysat.formula import WCNF
 from pysat.examples.rc2 import RC2
 from pysat.examples.fm import FM
 
@@ -50,7 +55,7 @@ if __name__ == "__main__":
         if w < 0:
             offset +=  w
             w       = -w
-            sign     = -1
+            sign    = -1
         if len(c) >= 2:
             nv += 1
             c.append(nv)
@@ -60,6 +65,82 @@ if __name__ == "__main__":
             phi.append([c[0]*sign], weight = w)
     print(f" {(time.time()-tstart):06.2f}s\nc")
 
+    #
+    # Run Gurobi
+    #
+    tstart = time.time()
+    print(f"c running Gurobi  ...", end = "")
+    env = gp.Env(empty=True)
+    env.setParam("OutputFlag",0)
+    env.start()
+    gurobi = gp.Model(env=env)
+    ilp_vars = [0]
+    for i in range(1,phi.nv+1):
+        ilp_vars.append( gurobi.addVar(vtype = GRB.BINARY, name = format(f"x{i}")) )
+    for c in phi.hard:
+        bound  = 1
+        clause = gp.LinExpr()
+        for v in c:        
+            if v < 0:
+                clause += -1*ilp_vars[abs(v)]
+                bound  -= 1
+            else:
+                clause += ilp_vars[abs(v)]
+        gurobi.addConstr( clause >= bound )
+
+    gurobi_offset = 0
+    obj = gp.LinExpr()
+    for (i,v) in enumerate(phi.soft):
+        v = v[0] # we have only unit soft clauses
+        w = phi.wght[i]        
+        if v < 0:
+            obj += ilp_vars[abs(v)] * -w
+            gurobi_offset += w
+        else:
+            obj += ilp_vars[abs(v)] * w
+
+            
+    gurobi.setObjective(obj, GRB.MAXIMIZE)
+    gurobi.optimize()           
+    print(f" {(time.time()-tstart):06.2f}s")
+    print(f"c Optimal Solution: { gurobi.objVal + gurobi_offset + offset }\nc")
+
+    #
+    # Run Scip
+    #
+    tstart = time.time()
+    print(f"c running SCIP    ...", end = "")
+    scip_offset = 0
+    model       = scip.Model()
+    ilp_vars    = [0]
+    for i in range(1,phi.nv+1):
+        ilp_vars.append( model.addVar(format(f"x{i}"), vtype = "BINARY") )
+    for c in phi.hard:
+        bound  = 1
+        clause = []
+        for v in c:        
+            if v < 0:
+                clause.append( -1*ilp_vars[abs(v)] )
+                bound  -= 1
+            else:
+                clause.append( ilp_vars[abs(v)] )
+        model.addCons( scip.quicksum(l for l in clause) >= bound )
+                
+    obj = []
+    for (i,v) in enumerate(phi.soft):
+        v = v[0] # we have only unit soft clauses
+        w = phi.wght[i]        
+        if v < 0:
+            obj.append( (ilp_vars[abs(v)], -w) )
+            scip_offset += w
+        else:
+            obj.append( (ilp_vars[abs(v)],  w) )
+    model.setObjective(scip.quicksum( x*w for (x,w) in obj ), "maximize")    
+    model.hideOutput()
+    model.optimize()
+    print(f" {(time.time()-tstart):06.2f}s")
+    print(f"c Optimal Solution: { model.getObjVal() + scip_offset + offset }\nc")        
+    
     #
     # Run RC2
     #
