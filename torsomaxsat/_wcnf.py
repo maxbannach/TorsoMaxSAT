@@ -125,7 +125,6 @@ class WCNF:
         # The unit soft clause has a positive weight, but we need to track a offset.
         self.soft[self.n] = -weight
         self.offset      +=  weight
-                   
 
     def __str__(self):
         """
