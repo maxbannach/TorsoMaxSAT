@@ -33,7 +33,7 @@ class GurobiSolver(Solver):
             gurobi.addConstr( clause >= bound )
 
         # adding the soft clauses
-        obj    = gp.LinExpr()
+        obj = gp.LinExpr()
         for v in self.wcnf.soft:
             obj += ilp_vars[v] * self.wcnf.soft[v]
         gurobi.setObjective(obj, GRB.MAXIMIZE)
