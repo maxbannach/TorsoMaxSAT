@@ -1,7 +1,7 @@
 from torsomaxsat import BiMap
 
 class WCNF:
-    __slots__ = 'n', 'hard', 'soft', 'varmap'
+    __slots__ = 'n', 'hard', 'soft', 'offset', 'varmap'
     """
     A *weighted* formula in conjunctive normal form with support for
     floating point weights (including negative weights).
@@ -18,7 +18,8 @@ class WCNF:
         self.n       = 0
         self.hard    = []
         self.soft    = {}
-        self.varmap  = BiMap()
+        self.offset  = 0
+        self.varmap  = BiMap()        
 
     def _sign(self, l):
         """
@@ -60,6 +61,23 @@ class WCNF:
             return self.soft[abs(soft_literal)]        
         except StopIteration:
             return float("inf")
+
+    def _max_fitness(self):
+        """
+        Returns the maximum possible value any model can have.
+        """
+        return sum(self.soft.values())
+
+    def _to_external_model(self, model):
+        """
+        Takes a model of the internal representation (as 0/1 array) and translates it into
+        an external model (as array containing -v/v for each variable v).
+        """
+        external_model = []
+        for v in self.varmap.key_to_value:
+            sign = 1 if model[self.varmap.get_value(v)-1] > 0 else -1
+            external_model.append( sign * v )
+        return external_model
     
     def add_clause( self, clause, weight = None ):
         """
@@ -75,15 +93,39 @@ class WCNF:
 
         If a non-unit soft clause is added, it will be added as hard clause with a fresh variable, whose
         negation is then added as unit soft clause.        
-        """        
+        """
+
+        # There is no need to add soft clauses of weight 0.
+        if weight and weight == 0: 
+            return
+
+        # Add the variables of the clause to the formula and cast it to the internal representation.
         self._ensure_vars( clause )
         clause = self._to_internal(clause)
-        if weight:
-            self.n += 1
+
+        # If there is no weight, we simply add the hard clause.
+        if not weight:
+            self.hard.append(clause)
+            return
+
+        # For positive weights we add a joker variable and a unit soft clause.
+        if weight > 0:
+            self.n += 1            
             clause.append(-self.n)
+            self.hard.append(clause)
             self.soft[self.n] = weight
-            
-        self.hard.append(clause)
+            return
+
+        # Here we have a soft clause with a negative weight.
+        # We also add a unit soft clause, but enforce that it is set to true if the clause is satisfied.
+        self.n += 1
+        for l in clause:
+            self.hard.append([-l, -self.n])
+
+        # The unit soft clause has a positive weight, but we need to track a offset.
+        self.soft[self.n] = -weight
+        self.offset      +=  weight
+                   
 
     def __str__(self):
         """
@@ -96,4 +138,15 @@ class WCNF:
                 w = "h"
             c = self._to_external(c)
             buffer.append(f"{w} {' '.join(map(str,c))} 0")            
+        return "\n".join(buffer)
+
+    def __repr__(self):
+        """
+        Prints the internal representation of the formula in the new DIMACS format (used since 2022).
+        """
+        buffer = []
+        for c in self.hard:
+            buffer.append(f"h {' '.join(map(str,c))} 0")
+        for v in self.soft:
+            print(f"{self.soft[v]} {v} 0")
         return "\n".join(buffer)

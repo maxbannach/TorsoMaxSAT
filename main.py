@@ -1,7 +1,5 @@
 import sys, argparse, time
 
-import gurobipy as gp
-from gurobipy import GRB
 
 import pyscipopt as scip
 
@@ -11,6 +9,7 @@ import pyscipopt as scip
 
 #import torsomaxsat
 from torsomaxsat import WCNF
+from torsomaxsat import GurobiSolver as Solver
 
 __version__ = "0.0.1"
 __author__ = "Max Bannach and Markus Hecher"
@@ -39,10 +38,20 @@ if __name__ == "__main__":
             if w == "h":
                 phi.add_clause( c );
             else:
-                phi.add_clause( c, weight = w );
-    
+                phi.add_clause( c, weight = float(w) );
+
+
+    print(repr(phi))
+    print("--------")
+                
     print(f"{phi}")
 
+    solver = Solver(phi)
+    solver.solve()
+    print(f"Solver Fitness:    {solver.get_fitness()}")
+    print(f"Solver Cost:       {solver.get_cost()}")
+    print(f"Solver Assignment: {solver.assignment}")
+    print( phi._to_external_model(solver.assignment) )
         
     # print(f"c parsing formula ...", end="")
     # tstart = time.time()
