@@ -1,35 +1,33 @@
 import sys, argparse, time
 
-# from pysat.formula import WCNF
-# from pysat.examples.rc2 import RC2
-# from pysat.examples.fm import FM
-
-#import torsomaxsat
 from torsomaxsat import WCNF
-#from torsomaxsat import GurobiSolver as Solver
-#from torsomaxsat import ScipSolver as Solver
-#from torsomaxsat import RC2Solver as Solver
-from torsomaxsat import FMSolver as Solver
+from torsomaxsat import GurobiSolver
+from torsomaxsat import ScipSolver
+from torsomaxsat import RC2Solver
+from torsomaxsat import FMSolver
 
 __version__ = "0.0.1"
 __author__ = "Max Bannach and Markus Hecher"
 
 if __name__ == "__main__":
 
-    # program info and argument parsing
+    # Program info and argument parsing.
     parser = argparse.ArgumentParser(description='A MaxSAT solver based on Tree Decompositions of the Torso Graph.')
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
+    parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm"], help="Base solvered used.", default="rc2")
     parser.add_argument("-f", "--file", type=argparse.FileType("r"), default=sys.stdin, help="Input formula (as DIMACS2022 wcnf). Default is stdin.")
 
-    # parse the arguments and map them to internal objects
+    # Parse the arguments and map them to internal objects.
     args  = parser.parse_args()
     input = args.file
     
-    # print the header (very important)
+    # Print the header (very important).
     print(f"c\nc ------ TorsoMaxSAT v{__version__} ------")
     print(f"c\nc Authors: {__author__}\nc")
 
-    # read the input formula (either from stdin or a file)
+    # Read the input formula (either from stdin or a file).
+    tstart = time.time()
+    print(f"c parsing input formula ...", end = "")
     phi = WCNF()
     for line in input:
         line = line.strip()
@@ -39,25 +37,41 @@ if __name__ == "__main__":
                 phi.add_clause( c );
             else:
                 phi.add_clause( c, weight = float(w) );
+    print(f" {(time.time()-tstart):06.2f}s")
+    print(f"c after translating to internal format:")
+    print(f"c variables:    {phi.n}")
+    print(f"c hard clauses: {len(phi.hard)}")
+    print(f"c soft clauses: {len(phi.soft)}")
+    print("c")
+    
+    # Initialize the selected solver.
+    if args.solver == "gurobi":
+        solver = GurobiSolver(phi)
+    elif args.solver == "scip":
+        solver = ScipSolver(phi)
+    elif args.solver == "rc2":
+        solver = RC2Solver(phi)
+    elif args.solver == "fm":
+        solver = FMSolver(phi)
 
-
-    print(repr(phi))
-    print("--------")                
-    print(f"{phi}")
-
-    solver = Solver(phi)
+    # Solve the instance.
+    tstart = time.time()
+    print(f"c running {args.solver}        ...", end = "")
     solver.solve()
-    print(f"Solver Fitness:    {solver.get_fitness()}")
-    print(f"Solver Cost:       {solver.get_cost()}")
-    print(f"Solver Assignment: {solver.assignment}")
-    #print( phi._to_external_model(solver.assignment) )
+    print(f" {(time.time()-tstart):06.2f}s")
+    
+    # Report the results.
+    print(f"c Fitness:    {solver.get_fitness()}")
+    print(f"c Cost:       {solver.get_cost()}")
+    print("c")
 
-    # #
-    # # Run FM
-    # #
-    # tstart = time.time()
-    # print(f"c running FM      ...", end = "")
-    # fm = FM(phi, verbose=0)
-    # fm.compute()
-    # print(f" {(time.time()-tstart):06.2f}s")
-    # print(f"c Optimal Solution: {sum(phi.wght) - fm.cost + offset}\nc")
+    # MSE output.
+    print("s OPTIMUM FOUND")
+    print(f"o {solver.get_cost()}")
+    for (i,l) in enumerate( phi._to_external_model(solver.assignment) ):
+        if i % 25 == 0:
+            if i > 0:
+                print()
+            print("v", end="")
+        print(f" {l}", end="")
+    print()
