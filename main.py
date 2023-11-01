@@ -2,9 +2,11 @@ import sys, argparse, time
 
 from torsomaxsat import WCNF
 from torsomaxsat import GurobiSolver
+from torsomaxsat import CplexSolver
 from torsomaxsat import ScipSolver
 from torsomaxsat import RC2Solver
 from torsomaxsat import FMSolver
+from torsomaxsat import GACOSolver
 
 __version__ = "0.0.1"
 __author__ = "Max Bannach and Markus Hecher"
