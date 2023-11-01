@@ -6,8 +6,11 @@ from torsomaxsat import ScipSolver
 from torsomaxsat import RC2Solver
 from torsomaxsat import FMSolver
 
+from torsomaxsat import PrimalGraph
+
+
 __version__ = "0.0.1"
-__author__ = "Max Bannach and Markus Hecher"
+__author__  = "Max Bannach and Markus Hecher"
 
 if __name__ == "__main__":
 
@@ -22,9 +25,9 @@ if __name__ == "__main__":
     input = args.file
     
     # Print the header (very important).
-    print(f"c\nc ------ TorsoMaxSAT v{__version__} ------")
-    print(f"c\nc Authors: {__author__}\nc")
-
+    print(f"c\nc ------------ TorsoMaxSAT v{__version__} ------------")
+    print(f"c\nc Authors: {__author__}\nc")    
+    
     # Read the input formula (either from stdin or a file).
     tstart = time.time()
     print(f"c parsing input formula ...", end = "")

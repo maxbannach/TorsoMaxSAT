@@ -4,3 +4,4 @@ dependencies:
   - pygmo
   - networkx
   - pyscipopt
+  - matplotlib

@@ -6,7 +6,7 @@ from gurobipy import GRB
 class GurobiSolver(Solver):
 
     def solve(self):
-
+   
         # hide Gurobi messages
         env = gp.Env(empty=True)
         env.setParam("OutputFlag",0)
