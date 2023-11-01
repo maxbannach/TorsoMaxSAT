@@ -5,9 +5,7 @@ from torsomaxsat import GurobiSolver
 from torsomaxsat import ScipSolver
 from torsomaxsat import RC2Solver
 from torsomaxsat import FMSolver
-
-from torsomaxsat import PrimalGraph
-
+from torsomaxsat import DPSolver
 
 __version__ = "0.0.1"
 __author__  = "Max Bannach and Markus Hecher"
@@ -17,7 +15,7 @@ if __name__ == "__main__":
     # Program info and argument parsing.
     parser = argparse.ArgumentParser(description='A MaxSAT solver based on Tree Decompositions of the Torso Graph.')
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
-    parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm"], help="Base solvered used.", default="rc2")
+    parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm", "dp"], help="Base solvered used.", default="rc2")
     parser.add_argument("-f", "--file", type=argparse.FileType("r"), default=sys.stdin, help="Input formula (as DIMACS2022 wcnf). Default is stdin.")
 
     # Parse the arguments and map them to internal objects.
@@ -56,6 +54,8 @@ if __name__ == "__main__":
         solver = RC2Solver(phi)
     elif args.solver == "fm":
         solver = FMSolver(phi)
+    elif args.solver == "dp":
+        solver = DPSolver(phi)
 
     # Solve the instance.
     tstart = time.time()

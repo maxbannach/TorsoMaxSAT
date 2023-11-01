@@ -6,3 +6,4 @@ from .solver._gurobi import GurobiSolver
 from .solver._scip   import ScipSolver
 from .solver._rc2    import RC2Solver
 from .solver._fm     import FMSolver
+from .solver._dp     import DPSolver
