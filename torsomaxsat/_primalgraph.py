@@ -3,17 +3,17 @@ import networkx as nx
 
 class PrimalGraph:
 
-    def __init__(self, wcnf):
+    def __init__(self, wcnf, external = False):
         self.wcnf = wcnf
         self.n    = wcnf.n
-
+        
         # build the graph
         self.g    = nx.Graph()
-        for v in range(1,self.n+1):
-            self.g.add_node(v)
 
         # add a clique for every clause
         for c in self.wcnf.hard:
+            if external:
+                c = self.wcnf._to_external(c)
             for (l1,l2) in itertools.combinations(c, 2):
                 self.g.add_edge(abs(l1), abs(l2))
                 

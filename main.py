@@ -1,6 +1,7 @@
 import sys, argparse, time
 
 from torsomaxsat import WCNF
+from torsomaxsat import PrimalGraph
 from torsomaxsat import GurobiSolver
 from torsomaxsat import ScipSolver
 from torsomaxsat import RC2Solver
@@ -17,7 +18,8 @@ if __name__ == "__main__":
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
     parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm", "dp"], help="Base solvered used.", default="rc2")
     parser.add_argument("-f", "--file", type=argparse.FileType("r"), default=sys.stdin, help="Input formula (as DIMACS2022 wcnf). Default is stdin.")
-
+    parser.add_argument('-p', '--primal', action='store_true', help='Just output the primal graph of the instance.')
+    
     # Parse the arguments and map them to internal objects.
     args  = parser.parse_args()
     input = args.file
@@ -44,6 +46,12 @@ if __name__ == "__main__":
     print(f"c hard clauses: {len(phi.hard)}")
     print(f"c soft clauses: {len(phi.soft)}")
     print("c")
+
+    # Auxillary modes.
+    if args.primal:
+        g = PrimalGraph(phi, external = True)
+        print(g)
+        sys.exit(0)
     
     # Initialize the selected solver.
     if args.solver == "gurobi":
