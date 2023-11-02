@@ -1,5 +1,6 @@
 import itertools
 import networkx as nx
+import matplotlib.pyplot as plt
 
 class PrimalGraph:
 
@@ -70,3 +71,10 @@ class PrimalGraph:
             buffer.append(format(f"{u} {v}"))
         return "\n".join(buffer)
 
+    def display(self):
+        """
+        Renders the graph with matplotlib (opens a window).
+        """
+        pos = nx.spring_layout(self.g, seed=42)
+        nx.draw(self.g, pos, with_labels=False, node_size=25, node_color='lightblue')
+        plt.show()
