@@ -6,6 +6,7 @@ from torsomaxsat import GurobiSolver
 from torsomaxsat import ScipSolver
 from torsomaxsat import RC2Solver
 from torsomaxsat import FMSolver
+from torsomaxsat import ORSolver
 from torsomaxsat import DPSolver
 
 __version__ = "0.0.1"
@@ -16,7 +17,7 @@ if __name__ == "__main__":
     # Program info and argument parsing.
     parser = argparse.ArgumentParser(description='A MaxSAT solver based on Tree Decompositions of the Torso Graph.')
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
-    parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm", "dp"], help="Base solvered used.", default="rc2")
+    parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm", "ortools", "dp"], help="Base solvered used.", default="rc2")
     parser.add_argument("-f", "--file", type=argparse.FileType("r"), default=sys.stdin, help="Input formula (as DIMACS2022 wcnf). Default is stdin.")
     parser.add_argument('-p', '--primal',  action='store_true', help='Just output the primal graph of the instance.')
     parser.add_argument('-d', '--display', action='store_true', help='Just produces a visual display of the instance.')
@@ -69,6 +70,8 @@ if __name__ == "__main__":
         solver = RC2Solver(phi)
     elif args.solver == "fm":
         solver = FMSolver(phi)
+    elif args.solver == "ortools":
+        solver = ORSolver(phi)
     elif args.solver == "dp":
         solver = DPSolver(phi)
 
