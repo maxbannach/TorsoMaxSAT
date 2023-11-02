@@ -1,4 +1,4 @@
-from torsomaxsat import Solver
+from torsomaxsat import Solver, State
 
 import gurobipy as gp
 from gurobipy import GRB
@@ -42,6 +42,10 @@ class GurobiSolver(Solver):
         gurobi.optimize()
 
         # store computed results
-        self.fitness    = gurobi.objVal
-        self.assignment = list(map(lambda v: int(v.X), ilp_vars[1:]))
+        if gurobi.status == gp.GRB.OPTIMAL:
+            self.fitness    = gurobi.objVal
+            self.assignment = list(map(lambda v: int(v.X), ilp_vars[1:]))
+            self.state      = State.OPTIMAL
+        else:
+            self.state = State.UNSAT
     

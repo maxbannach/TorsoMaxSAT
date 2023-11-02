@@ -1,4 +1,4 @@
-from torsomaxsat import Solver
+from torsomaxsat import Solver, State
 
 import pyscipopt as sp
 
@@ -36,5 +36,9 @@ class ScipSolver(Solver):
         scip.optimize()
         
         # store computed results
-        self.fitness    = scip.getObjVal()
-        self.assignment = list(map(lambda v: int(scip.getVal(v)), ilp_vars[1:]))
+        if scip.getStatus() == sp.SCIP_STATUS.OPTIMAL:
+            self.fitness    = scip.getObjVal()
+            self.assignment = list(map(lambda v: int(scip.getVal(v)), ilp_vars[1:]))
+            self.state      = State.OPTIMAL
+        else:
+            self.state = State.UNSAT

@@ -1,4 +1,4 @@
-from torsomaxsat import Solver
+from torsomaxsat import Solver, State
 
 from pysat.formula import WCNF
 from pysat.examples.fm import FM
@@ -16,9 +16,13 @@ class FMSolver(Solver):
 
         # Setup the FM solver and compute a model.
         fm    = FM(phi, verbose=0)
-        fm.compute()
-        model = fm.model
+        state = fm.compute()
 
         # Store the result in the internal format.
-        self.fitness    = self.wcnf._max_fitness() - fm.cost
-        self.assignment = list(map(lambda l: 1 if l >= 0 else 0, model))            
+        if state:
+            model           = fm.model
+            self.fitness    = self.wcnf._max_fitness() - fm.cost
+            self.assignment = list(map(lambda l: 1 if l >= 0 else 0, model))
+            self.state      = State.OPTIMAL
+        else:
+            self.state = State.UNSAT

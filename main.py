@@ -2,6 +2,7 @@ import sys, argparse, time
 
 from torsomaxsat import WCNF
 from torsomaxsat import PrimalGraph
+from torsomaxsat import State
 from torsomaxsat import GurobiSolver
 from torsomaxsat import ScipSolver
 from torsomaxsat import RC2Solver
@@ -82,6 +83,11 @@ if __name__ == "__main__":
     print(f" {(time.time()-tstart):06.2f}s")
     
     # Report the results.
+    if solver.state == State.UNSAT:
+        print("s UNSATISFIABLE")
+        sys.exit(0)
+
+    # Comment on the results.
     print(f"c Fitness:    {solver.get_fitness()}")
     print(f"c Cost:       {solver.get_cost()}")
     print("c")

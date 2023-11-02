@@ -1,4 +1,5 @@
 from torsomaxsat import Solver
+from torsomaxsat import State
 
 from ortools.sat.python import cp_model
 
@@ -26,7 +27,7 @@ class ORSolver(Solver):
             w = self.wcnf.soft[v]
             soft.append( (v,w) )
         phi.Maximize( sum(vars[abs(v)] * w for (v, w) in soft) )
-
+        
         # Run the CP-Solver and obtain the status.
         solver = cp_model.CpSolver()
         status = solver.Solve(phi)                      
@@ -35,3 +36,6 @@ class ORSolver(Solver):
         if status == cp_model.OPTIMAL:
             self.fitness    = solver.ObjectiveValue()
             self.assignment = [solver.Value(x) for x in vars[1:]]            
+            self.state = State.OPTIMAL
+        else:
+            self.state = State.UNSAT

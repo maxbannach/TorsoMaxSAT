@@ -1,7 +1,7 @@
 from ._utils          import BiMap
 from ._wcnf           import WCNF
 from ._primalgraph    import PrimalGraph
-from .solver          import Solver
+from .solver          import Solver, State
 from .solver._gurobi  import GurobiSolver
 from .solver._scip    import ScipSolver
 from .solver._rc2     import RC2Solver
