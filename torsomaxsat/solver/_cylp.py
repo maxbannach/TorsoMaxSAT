@@ -3,41 +3,44 @@ from torsomaxsat import State
 
 from ortools.sat.python import cp_model
 
-from cylp.cy import CyClpSimplex
+
+import cylp
 
 class CyLPSolver(Solver):
 
     def solve(self):
 
-        # Build a ortools representation of the formula.
-        phi  = cp_model.CpModel()
-        vars = [0]
-        for v in range(1,self.wcnf.n+1):
-            vars.append( phi.NewBoolVar(format(f"x{v}")) )
+        cylp = CyClpSimplex()
 
-        # Helper function to translate integers to variables.
-        def int2var(x):
-            return vars[x] if x > 0 else vars[abs(x)].Not()
+        # Addding the variables.
+        ilp_vars = [0]
+        for i in range(1,self.wcnf.n+1):
+            ilp_vars.append( cylp.addVariable(format(f"x{i}"), isInt=True) )
 
-        # Add the hard clauses.
+        # Adding the hard clauses.
         for c in self.wcnf.hard:
-            phi.AddBoolOr(list(map(int2var, c)))
+            bound        = 1
+            coefficients = []
+            variables    = []
+            for l in c:
+                variables.append(ilp_vars[abs(l)])
+                if l < 0:
+                    coefficents.append(-1)
+                    clause.append( -1* )
+                    bound  -= 1
+                else:
+                    coefficents.append(1)
+            constraint = coefficients @ CyLPArray(variables)
+            cylp += constraint >= bound
 
-        # Add the soft clauses (as the objective function).
-        soft = []
-        for v in self.wcnf.soft:
-            w = self.wcnf.soft[v]
-            soft.append( (v,w) )
-        phi.Maximize( sum(vars[abs(v)] * w for (v, w) in soft) )
-        
-        # Run the CP-Solver and obtain the status.
-        solver = cp_model.CpSolver()
-        status = solver.Solve(phi)                      
+        cylp.solver = CyClpSimplex()
+        cylp.solver.logLevel = 0
+        cylp.optimize()
 
-        # Store the result in the internal format.
-        if status == cp_model.OPTIMAL:
-            self.fitness    = solver.ObjectiveValue()
-            self.assignment = [solver.Value(x) for x in vars[1:]]            
-            self.state = State.OPTIMAL
-        else:
-            self.state = State.UNSAT
+        print("Optimal solution:")
+        for variable in all_variables:
+            print(f"{variable.name} = {model.primalVariableSolution[variable.name]:.2f}")
+        print(f"Objective value = {model.objectiveValue:.2f}")
+        print()
+        print()
+            
