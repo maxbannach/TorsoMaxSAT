@@ -27,7 +27,6 @@ The following packages need to be installed addionaly via `pip`:
 pip install gurobipy
 pip install 'python-sat[aiger,approxmc,pblib]'
 pip install ortools
-pip install cylp
 ```
 
 # Updating the Conda Environment
