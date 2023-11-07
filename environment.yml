@@ -6,3 +6,8 @@ dependencies:
   - pyscipopt
   - matplotlib
   - pandas
+  - coin-or-cbc
+  - cython
+  - numpy
+  - pkg-config
+  - scipy
