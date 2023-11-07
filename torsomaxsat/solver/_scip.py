@@ -36,7 +36,7 @@ class ScipSolver(Solver):
         scip.optimize()
         
         # store computed results
-        if scip.getStatus() == sp.SCIP_STATUS.OPTIMAL:
+        if scip.getStatus() == "optimal":
             self.fitness    = scip.getObjVal()
             self.assignment = list(map(lambda v: int(scip.getVal(v)), ilp_vars[1:]))
             self.state      = State.OPTIMAL
