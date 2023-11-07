@@ -7,8 +7,7 @@ You can run the solver (with some of the provided examples) as follows:
 ```
 xz -cd examples/<file> | python main.py -s <solver>
 ```
-Where `<solver>` is one of `gurobi`, `scip`, `sc2`, or `fm`. 
-
+Where `<solver>` is one of `gurobi`, `scip`, `rc2`, `fm`, `ortools`, or `dp`.
 
 # Install the Conda Environment
 After having downloaded the repository and moved to its root, you can install your conda environment as follows:
