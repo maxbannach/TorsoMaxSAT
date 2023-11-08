@@ -154,5 +154,5 @@ class WCNF:
         for c in self.hard:
             buffer.append(f"h {' '.join(map(str,c))} 0")
         for v in self.soft:
-            print(f"{self.soft[v]} {v} 0")
+            buffer.append(f"{self.soft[v]} {v} 0")
         return "\n".join(buffer)
