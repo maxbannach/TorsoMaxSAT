@@ -9,6 +9,7 @@ from torsomaxsat import RC2Solver
 from torsomaxsat import FMSolver
 from torsomaxsat import ORSolver
 from torsomaxsat import DPSolver
+from torsomaxsat import ExternalSolver
 
 __version__ = "0.0.1"
 __author__  = "Max Bannach and Markus Hecher"
@@ -18,7 +19,8 @@ if __name__ == "__main__":
     # Program info and argument parsing.
     parser = argparse.ArgumentParser(description='A MaxSAT solver based on Tree Decompositions of the Torso Graph.')
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
-    parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm", "ortools", "dp"], help="Base solvered used.", default="rc2")
+    parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm", "ortools", "dp", "external"], help="Base solvere used.", default="rc2")
+    parser.add_argument("--externalsolver", help="Command to execute an external solver.")
     parser.add_argument("-f", "--file", type=argparse.FileType("r"), default=sys.stdin, help="Input formula (as DIMACS2022 wcnf). Default is stdin.")
     parser.add_argument('-p', '--primal',  action='store_true', help='Just output the primal graph of the instance.')
     parser.add_argument('-d', '--display', action='store_true', help='Just produces a visual display of the instance.')
@@ -55,8 +57,6 @@ if __name__ == "__main__":
         g = PrimalGraph(phi, external = True)
         print(g)
         sys.exit(0)
-
-    # Auxillary modes.
     if args.display:
         g = PrimalGraph(phi, external = True)
         g.display()
@@ -75,6 +75,12 @@ if __name__ == "__main__":
         solver = ORSolver(phi)
     elif args.solver == "dp":
         solver = DPSolver(phi)
+    elif args.solver == "external":
+        if not args.externalsolver:
+            print("c\nc Error: Solver <external> is used but no external solver was specified.\nc")
+            sys.exit(1)
+        solver            = ExternalSolver(phi)
+        solver.solver_cmd = args.externalsolver
 
     # Solve the instance.
     tstart = time.time()
