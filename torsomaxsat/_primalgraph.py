@@ -26,10 +26,10 @@ class PrimalGraph:
             (width, td) = nx.algorithms.approximation.treewidth_min_degree(self.g)
 
         # find a suitable root
-        td = self._root_td(td)            
+        td, root = self._root_td(td)            
 
                 
-        return (width, td)
+        return (width, td, root)
 
     def _root_td(self, td):
         """
@@ -58,7 +58,7 @@ class PrimalGraph:
             if digraph.in_degree(v) == 0:
                 digraph.nodes[v]['leaf'] = True
         
-        return digraph
+        return digraph, root
                 
     def __str__(self):
         """
