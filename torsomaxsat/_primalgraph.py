@@ -48,14 +48,19 @@ class PrimalGraph:
             for w in td.neighbors(v):
                 if w in visited:
                     continue
-                digraph.add_edge(w, v)
+                # edges to child nodes
+                digraph.add_edge(v, w)  #works with nx.dfs_postorder_nodes
                 queue.append(w)
                 visited.add(w)
 
+        # add empty artificial root
+        aroot = frozenset()
+        digraph.add_edge(aroot, root)
+        root = aroot
         # mark the root and the leaves
         digraph.nodes[root]['root'] = True
         for v in digraph.nodes:
-            if digraph.in_degree(v) == 0:
+            if digraph.out_degree(v) == 0: #works with nx.dfs_postorder_nodes
                 digraph.nodes[v]['leaf'] = True
         
         return digraph, root
