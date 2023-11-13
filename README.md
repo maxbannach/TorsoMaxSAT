@@ -37,5 +37,5 @@ conda env update --file environment.yml --prune
 Run the following command to see if the installation works as intended:
 ```
 python -m unittest -v
-``
+```
 
