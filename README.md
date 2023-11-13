@@ -9,6 +9,23 @@ xz -cd examples/<file> | python main.py -s <solver>
 ```
 Where `<solver>` is one of `gurobi`, `scip`, `rc2`, `fm`, `ortools`, or `dp`.
 
+## Use an External MaxSAT Solver
+TorsoMaxSAT can also be used with external solvers. Execute it with:
+```
+xz -cd examples/<file> | python main.py -s external --externalsolver <cmd>
+```
+Here, `<cmd>` is the command that should be executed to run the external MaxSAT solver.
+
+## Use an External Treewidth Solver
+TorsoMaxSAT computes tree decompositions by default with [NetworkX](https://networkx.org).
+However, it supports external treewidth solvers that are that are compatible with the PACE format:
+
+```
+xz -cd examples/<file> | python main.py -s db --twsolver <cmd>
+```
+Here, `<cmd>` is the command that should be executed to run the external treewidth solver.
+
+
 # Install the Conda Environment
 After having downloaded the repository and moved to its root, you can install your conda environment as follows:
 
