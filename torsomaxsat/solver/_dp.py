@@ -50,7 +50,7 @@ class DPSolver(Solver):
         if len(t) > 0:
             it = tuple(t.items())[0]
             #self.fitness = functools.reduce(lambda a,w: a+w, self.costmap.values()) -it[1]
-            self.fitness = -it[1] + sum(self.wcnf.soft.values()) -it[1]
+            self.fitness = sum(self.wcnf.soft.values()) -it[1]
             #self.fitness = -it[1]
             #self.assignment = self.ass2lits(it[0])
             #print(self.assignment)
@@ -134,7 +134,8 @@ class DPSolver(Solver):
         n,m = nogood
         # note that nogood needs to be visible (mind negative assignments)
         # nogood visible and nogood invalidated
-        return m & mask == m and k & m == n&m
+        #return m & mask == m and k & m == n&m
+        return k & m == n
 
     #clausel x v -y v z
     #check whether 010 matches, i.e., whether we have nogood -x,y,-z
@@ -160,13 +161,11 @@ class DPSolver(Solver):
         tables = {}
        
         for n in nx.dfs_postorder_nodes(self.td, self.root):
-            bag = n #self.td.bag(n)
-
             chmasks = 0
             for c in self.td.successors(n):   #child nodes
                 chmasks = chmasks | tables[c][1]
 
-            mask = self.makeMask(bag, update=chmasks)
+            mask = self.makeMask(n, update=chmasks)
             print("NODE ", n, " MASK ", mask, " poses ", self.poses, " rev ", self.varmap_rev)
             m = None
             if 'leaf' in self.td.nodes[n]: #n.isLeaf():
@@ -202,7 +201,7 @@ class DPSolver(Solver):
            
             # intr
             print("intro ", mask, " chmasks ", chmasks)
-            m = self.intro(bag, m, mask, chmasks)
+            m = self.intro(n, m, mask, chmasks)
             tables[n] = (m,mask)
             print("setting ", m, " for ", n)
         return tables[self.root][0]   #root table
