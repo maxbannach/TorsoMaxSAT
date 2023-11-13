@@ -21,9 +21,12 @@ if __name__ == "__main__":
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
     parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm", "ortools", "dp", "external"], help="Base solvere used.", default="rc2")
     parser.add_argument("--externalsolver", help="Command to execute an external solver.")
+    parser.add_argument("-t", "--twsolver", help="Command to execute an external treewidth solver (PACE compatible).")
     parser.add_argument("-f", "--file", type=argparse.FileType("r"), default=sys.stdin, help="Input formula (as DIMACS2022 wcnf). Default is stdin.")
     parser.add_argument('-p', '--primal',  action='store_true', help='Just output the primal graph of the instance.')
-    parser.add_argument('-d', '--display', action='store_true', help='Just produces a visual display of the instance.')
+    parser.add_argument('-d', '--display', action='store_true', help='Just produces a visual display of the instance.')    
+    parser.add_argument('-tw', action='store_true', help='Estimate the treewidth of the formula and quit.')    
+
     
     # Parse the arguments and map them to internal objects.
     args  = parser.parse_args()
@@ -54,12 +57,17 @@ if __name__ == "__main__":
 
     # Auxillary modes.
     if args.primal:
-        g = PrimalGraph(phi, external = True)
+        g = PrimalGraph(phi, external = True, twsolver = args.twsolver)
         print(g)
         sys.exit(0)
     if args.display:
-        g = PrimalGraph(phi, external = True)
+        g = PrimalGraph(phi, external = True, twsolver = args.twsolver)
         g.display()
+        sys.exit(0)
+    if args.tw:
+        g = PrimalGraph(phi, external = True, twsolver = args.twsolver)
+        (tw,_) = g.compute_tree_decomposition()
+        print(tw)
         sys.exit(0)
         
     # Initialize the selected solver.

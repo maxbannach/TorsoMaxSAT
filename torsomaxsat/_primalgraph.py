@@ -39,7 +39,7 @@ def _neighbors_of_set_in(g, c, s):
 
 class PrimalGraph:
 
-    def __init__(self, wcnf, external = False):
+    def __init__(self, wcnf, external = False, twsolver = None):
         self.wcnf = wcnf
         self.n    = wcnf.n
         
