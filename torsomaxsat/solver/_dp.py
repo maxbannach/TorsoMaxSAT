@@ -50,7 +50,7 @@ class DPSolver(Solver):
         if len(t) > 0:
             it = tuple(t.items())[0]
             #self.fitness = functools.reduce(lambda a,w: a+w, self.costmap.values()) -it[1]
-            self.fitness = sum(self.wcnf.soft.values()) -it[1]
+            self.fitness = -it[1] + sum(self.wcnf.soft.values()) -it[1]
             #self.fitness = -it[1]
             #self.assignment = self.ass2lits(it[0])
             #print(self.assignment)
@@ -63,10 +63,15 @@ class DPSolver(Solver):
             #self.fitness    = None 
             #self.assignment = []
 
-    def inscope(self, clause):
+    def inscope(self, clause, bag, par=None):
+        #print("SCOPE ", clause, bag)
         for l in clause:
-            if abs(l) not in self.varmap:
+            if abs(l) not in bag or (par is not None and abs(l) in par): #self.varmap:
                 return False
+            #else:
+            #    pos = self.varmap[abs(l)]
+            #    if pos not in self.varmap_rev or self.varmap_rev[pos] != abs(l):
+            #        return False
         return True
 
     def first(self, v, mask, start=0):
@@ -83,10 +88,11 @@ class DPSolver(Solver):
         m = 0
         free = 0
         firstfree = 0
+        maxpos = 0
         if update is not None:
             free = update
-            for pos in self.varmap_rev: # positions in-use
-                free = free | (1 << pos)
+            #for pos in self.varmap_rev: # positions in-use
+            #    free = free | (1 << pos)
             self.poses = 0
         for b in nogood:
             pos = None 
@@ -103,7 +109,8 @@ class DPSolver(Solver):
                 free = free | (1 << pos)
                 self.varmap[abs(b)] = pos
                 self.varmap_rev[pos] = abs(b)
-                self.poses = firstfree
+                maxpos = max(pos + 1, maxpos)
+                self.poses = maxpos 
             if b > 0 or not zero_as_false:
                 m = m | (1 << pos) #_utils._shift(pos)
         return m
@@ -116,12 +123,12 @@ class DPSolver(Solver):
             mask = mask >> 1
         return pos
 
-    def ass2lits(self, ass):
-        lits = []
-        for i in range(0, self.poses):
-            lits.append(self.varmap_rev[i] * (1 if ass & 1 else -1))
-            ass = ass >> 1
-        return lits
+    #def ass2lits(self, ass):
+    #    lits = []
+    #    for i in range(0, self.poses):
+    #        lits.append(self.varmap_rev[i] * (1 if ass & 1 else -1))
+    #        ass = ass >> 1
+    #    return lits
 
     def inv_nogood(self, nogood, k, mask):
         n,m = nogood
@@ -140,9 +147,9 @@ class DPSolver(Solver):
 
     def softgood(self, ngs, k, chmask, mask):
         costs = 0
-        for (n,m,w) in ngs:
+        for (n,m,w,cl) in ngs:
             #print("CHECKING SOFT ", n, k, chmask, mask)
-            if m & mask != m and self.inv_nogood((n,m), k, chmask): #if we have clause -> expensive
+            if self.inv_nogood((n,m), k, chmask): #if we have clause -> expensive
                 print("INV soft nogood ", (n,w), " for ", k)
         # m & chmask == m and m & mask != m and k & n & m == n & m: 
         # nogood visible in child, not anymore and unmatched --> cost + 1
@@ -154,24 +161,28 @@ class DPSolver(Solver):
        
         for n in nx.dfs_postorder_nodes(self.td, self.root):
             bag = n #self.td.bag(n)
-            mask = self.makeMask(bag, update=0)
-            print("NODE ", n, " MASK ", mask, " poses ", self.poses)
-            m = None
+
             chmasks = 0
+            for c in self.td.successors(n):   #child nodes
+                chmasks = chmasks | tables[c][1]
+
+            mask = self.makeMask(bag, update=chmasks)
+            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " rev ", self.varmap_rev)
+            m = None
             if 'leaf' in self.td.nodes[n]: #n.isLeaf():
                 m = {0:0}   #empty assignment 0 : costs 0
                 print('leaf')
             else:
                 #for c in self.td.predecessors(n):   #child nodes
                 for c in self.td.successors(n):   #child nodes
-                    print("previous: ", c)
-                    chmask = self.makeMask(c) #self.td.bag(c))
-                    chmasks = chmasks | chmask
+                    print("previous: ", c, tables[c][0])
+                    chmask = tables[c][1] #self.td.bag(c))
                     
                     # grab table
-                    mn = tables[c]
+                    mn = tables[c][0]
                     # project
-                    mn = self.forget(mn, mask, chmask)
+                    #mn = self.forget(list(self.td.predecessors(n))[0], mn, mask, chmask)
+                    mn = self.forget(c, n, mn, mask, chmask)
                     print("project ", mn, " mask ", mask, " chmask ", chmask)
                     # join
                     if m is None:
@@ -184,15 +195,17 @@ class DPSolver(Solver):
                     # free table
                     del tables[c]
                     # free allocated, removed mask elements
-                    for i in self.mask2pos(chmask & ~mask):
-                        del self.varmap_rev[i]
+                    #print(self.mask2pos(chmask & ~mask))
+                    #for i in self.mask2pos(chmask & ~mask):
+                        #assert(i in self.varmap_rev)
+                    #    del self.varmap_rev[i]
            
             # intr
             print("intro ", mask, " chmasks ", chmasks)
-            m = self.intro(m, mask, chmasks)
-            tables[n] = m
+            m = self.intro(bag, m, mask, chmasks)
+            tables[n] = (m,mask)
             print("setting ", m, " for ", n)
-        return tables[self.root]   #root table
+        return tables[self.root][0]   #root table
 
 
     #equijoin of two dicts
@@ -207,15 +220,17 @@ class DPSolver(Solver):
 
 
     #fresh items at poses
-    def intro(self, m1, mask, chmasks):
+    def intro(self, bag, m1, mask, chmasks):
         pos = self.mask2pos(mask & ~chmasks)    #intro poses
-        m = m1
 
         ngs = []
         for clause in self.wcnf.hard:
-            if self.inscope(clause):
-                ngs.append(self.conv2nogood(clause))
+            if self.inscope(clause, bag):
+                ng = self.conv2nogood(clause)
+                #if n & mask == n:
+                ngs.append(ng)
 
+        m = m1
         if len(pos) > 0:
             m = {}
             for (k,o) in m1.items():
@@ -229,16 +244,22 @@ class DPSolver(Solver):
         return m
 
     #project according to bitmask
-    def forget(self, m1, mask, chmask):
+    def forget(self, bag, par_bag, m1, mask, chmask):
         keep = mask & chmask
 
         ngs = []
         for (clause,w) in self.wcnf.soft.items():
+            #print("candidate soft nogood ", clause)
             clause = [-clause]  #clause means we should have -clause
-            if self.inscope(clause):
+            if self.inscope(clause, bag, par=par_bag):
                 (n,m) = self.conv2nogood(clause)
-                ngs.append((n,m,w))
-        
+                #if n & mask != n: # and m & mask != m:
+                ngs.append((n,m,w,clause))
+                #else:
+                #    print(clause, bag, n, chmask, m, mask)
+                #    assert(False)
+       
+        print("soft nogoods ", mask, chmask, ngs)
         m = {}
 
         for (k,o) in m1.items():
