@@ -83,6 +83,7 @@ if __name__ == "__main__":
         solver = ORSolver(phi)
     elif args.solver == "dp":
         solver = DPSolver(phi)
+        solver.twsolver = args.twsolver
     elif args.solver == "external":
         if not args.externalsolver:
             print("c\nc Error: Solver <external> is used but no external solver was specified.\nc")
