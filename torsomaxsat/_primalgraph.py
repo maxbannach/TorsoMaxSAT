@@ -65,28 +65,6 @@ class PrimalGraph:
 
         # done
         return (width, td)
-
-    def to_torso_decomposition(self, td, bound):
-        print("computing a torso decomposition")
-        colors = ['red' if len(x) <= bound else 'gray' for x in td.nodes]
-
-        t = map(lambda x: x[1], filter(lambda v: colors[v[0]] == 'red', enumerate(td.nodes)))
-        h = nx.Graph(td.subgraph(t))
-
-        torso = set()
-        for c in nx.connected_components(h):
-            for v in c:
-                torso = torso.union(v)
-
-
-        h = self.g.subgraph(torso)
-        print(len(h))
-        (w,td) = nx.algorithms.approximation.treewidth_min_fill_in(h)
-        print(f"tw = {w}")
-        
-        pos = nx.kamada_kawai_layout(td)
-        nx.draw(td, pos, with_labels=False, node_size=25)
-        plt.show()
     
     def _root_td(self, td):
         """
