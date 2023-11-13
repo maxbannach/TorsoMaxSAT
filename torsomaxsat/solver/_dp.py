@@ -50,7 +50,7 @@ class DPSolver(Solver):
         if len(t) > 0:
             it = tuple(t.items())[0]
             #self.fitness = functools.reduce(lambda a,w: a+w, self.costmap.values()) -it[1]
-            self.fitness = sum(self.wcnf.soft.values()) -it[1]
+            self.fitness = it[1] #sum(self.wcnf.soft.values()) -it[1]
             #self.fitness = -it[1]
             #self.assignment = self.ass2lits(it[0])
             #print(self.assignment)
@@ -98,7 +98,7 @@ class DPSolver(Solver):
             pos = None 
             try:
                 pos = self.varmap[abs(b)]   # already assigned?
-                #print(abs(b), pos, self.varmap_rev, self.varmap)
+                print(abs(b), pos, self.varmap_rev, self.varmap)
                 if firstfree == pos:
                     firstfree = firstfree + 1
             except KeyError:
@@ -162,7 +162,9 @@ class DPSolver(Solver):
        
         for n in nx.dfs_postorder_nodes(self.td, self.root):
             chmasks = 0
+            cs = []
             for c in self.td.successors(n):   #child nodes
+                cs.append(c)
                 chmasks = chmasks | tables[c][1]
 
             mask = self.makeMask(n, update=chmasks)
@@ -201,7 +203,7 @@ class DPSolver(Solver):
            
             # intr
             print("intro ", mask, " chmasks ", chmasks)
-            m = self.intro(n, m, mask, chmasks)
+            m = self.intro(n, cs, m, mask, chmasks)
             tables[n] = (m,mask)
             print("setting ", m, " for ", n)
         return tables[self.root][0]   #root table
@@ -219,8 +221,9 @@ class DPSolver(Solver):
 
 
     #fresh items at poses
-    def intro(self, bag, m1, mask, chmasks):
-        pos = self.mask2pos(mask & ~chmasks)    #intro poses
+    def intro(self, bag, ch_bag, m1, mask, chmasks):
+        pos = set(bag).difference(ch_bag)
+        #pos = self.mask2pos(mask & ~chmasks)    #intro poses
 
         ngs = []
         for clause in self.wcnf.hard:
@@ -265,7 +268,7 @@ class DPSolver(Solver):
             o = o + self.softgood(ngs, k, chmask, mask)
             k = k & keep
             try:
-                m[k] = min(m[k], o) #take smallest costs
+                m[k] = max(m[k], o) #take smallest costs
             except KeyError:
                 m[k] = o
         return m
