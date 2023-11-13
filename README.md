@@ -25,6 +25,12 @@ xz -cd examples/<file> | python main.py -s db --twsolver <cmd>
 ```
 Here, `<cmd>` is the command that should be executed to run the external treewidth solver.
 
+## Preprocessing
+TorsoMaxSAT supports the MaxSAT preprocessor [maxpre2](https://bitbucket.org/coreo-group/maxpre2). By providing a path to the executable, all implemented solvers will operate on a preprocessed formula:
+```
+xz -cd examples/<file> | python main.py --maxpre <path to maxpre executable>
+```
+Currently, we do not support configurations of maxpre but use a carefully chosen setting tailored toward a decomposition-guided approach. In particular, `<path to maxpre executable>` should indeed map to the executable and should not contain any flags or options.
 
 # Install the Conda Environment
 After having downloaded the repository and moved to its root, you can install your conda environment as follows:

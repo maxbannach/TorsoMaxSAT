@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--primal',  action='store_true', help='Just output the primal graph of the instance.')
     parser.add_argument('-d', '--display', action='store_true', help='Just produces a visual display of the instance.')    
     parser.add_argument('-tw', action='store_true', help='Estimate the treewidth of the formula and quit.')    
-
+    parser.add_argument("--maxpre", help="Path to the maxpre2 preprocessor.")
     
     # Parse the arguments and map them to internal objects.
     args  = parser.parse_args()
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     
     # Read the input formula (either from stdin or a file).
     tstart = time.time()
-    print(f"c parsing input formula ...", end = "")
+    print(f"c Parsing the input formula ...", end = "", flush=True)    
     phi = WCNF()
     for line in input:
         line = line.strip()
@@ -48,11 +48,13 @@ if __name__ == "__main__":
                 phi.add_clause( c );
             else:
                 phi.add_clause( c, weight = float(w) );
-    print(f" {(time.time()-tstart):06.2f}s")
-    print(f"c after translating to internal format:")
-    print(f"c variables:    {phi.n}")
-    print(f"c hard clauses: {len(phi.hard)}")
-    print(f"c soft clauses: {len(phi.soft)}")
+    print(f" {(time.time()-tstart):06.2f}s.\nc")
+
+    # Print some stats.
+    print(f"c After translating to internal format:")
+    print(f"c Variables:    {phi.n}")
+    print(f"c Hard Clauses: {len(phi.hard)}")
+    print(f"c Soft Clauses: {len(phi.soft)}")
     print("c")
 
     # Auxillary modes.
@@ -72,30 +74,29 @@ if __name__ == "__main__":
         
     # Initialize the selected solver.
     if args.solver == "gurobi":
-        solver = GurobiSolver(phi)
+        solver = GurobiSolver(phi, preprocessor = args.maxpre)
     elif args.solver == "scip":
-        solver = ScipSolver(phi)
+        solver = ScipSolver(phi,   preprocessor = args.maxpre)
     elif args.solver == "rc2":
-        solver = RC2Solver(phi)
+        solver = RC2Solver(phi,    preprocessor = args.maxpre)
     elif args.solver == "fm":
-        solver = FMSolver(phi)
+        solver = FMSolver(phi,     preprocessor = args.maxpre)
     elif args.solver == "ortools":
-        solver = ORSolver(phi)
+        solver = ORSolver(phi,     preprocessor = args.maxpre)
     elif args.solver == "dp":
-        solver = DPSolver(phi)
+        solver = DPSolver(phi,     preprocessor = args.maxpre)
         solver.twsolver = args.twsolver
     elif args.solver == "external":
         if not args.externalsolver:
             print("c\nc Error: Solver <external> is used but no external solver was specified.\nc")
             sys.exit(1)
-        solver            = ExternalSolver(phi)
+        solver = ExternalSolver(phi, preprocessor = args.maxpre)
         solver.solver_cmd = args.externalsolver
 
     # Solve the instance.
     tstart = time.time()
-    print(f"c running {args.solver}        ...", end = "")
-    solver.solve()
-    print(f" {(time.time()-tstart):06.2f}s")
+    solver.preprocess_and_solve()
+    print(f"c Solved with {args.solver} in {(time.time()-tstart):06.2f}s")
     
     # Report the results.
     if solver.state == State.UNSAT:

@@ -90,6 +90,7 @@ class PrimalGraph:
         # Generate a temporary file to store the graph.
         with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:                
             temp_file.write(str(self))
+            temp_file.flush()
         try:
             # Call the external treewidth solver.
             result      = subprocess.run(self.twsolver + " < " + temp_file.name, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
