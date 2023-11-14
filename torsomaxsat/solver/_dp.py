@@ -243,15 +243,31 @@ class DPSolver(Solver):
     def join(self, mask, m1, m1mask, m2, m2mask):
         m1mask = mask & m1mask
         m2mask = mask & m2mask
+
+        b = None
+        if len(self.mask2pos(m1mask & ~m2mask)) < len(self.mask2pos(m2mask & ~m1mask)): #swap
+            m = m1
+            mm = m1mask
+            
+            m1 = m2
+            m1 = m2mask
+            
+            m2 = m
+            m2mask = mm
+
+        if ~m1mask & m2mask > 0:    #sth missing?
+            b = self.mask2pos(m1mask | (~m1mask & m2mask))
+            m1 = self.intro(b, m1, m1mask | (~m1mask & m2mask), m1mask)
+
         m = {}
 
-        if m1mask == m2mask:    #equijoin
+        if True: #m1mask == m2mask:    #equijoin
             for (k,o) in m1.items():
                 try:
                     m[k] = o + m2[k]
                 except KeyError:
                     pass
-        else:
+        else:           # FIXME, only quadratic join ;/
             for (k,o) in m1.items():
                 k = k & m2mask
                 for (k2,o2) in m2.items():
@@ -271,6 +287,9 @@ class DPSolver(Solver):
         #pos = set(bag).difference(ch_bag)
         #print(pos)
         pos = self.mask2pos(mask & ~chmasks)    #intro poses
+        if len(pos) == 0:
+            return m1
+
         print("INTR POS ", pos)
 
         ngs = []
