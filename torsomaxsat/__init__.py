@@ -1,5 +1,6 @@
 from ._utils           import BiMap
 from ._wcnf            import WCNF
+from ._torso           import Torso
 from ._primalgraph     import PrimalGraph
 from .solver           import Solver, State
 from .solver._gurobi   import GurobiSolver
