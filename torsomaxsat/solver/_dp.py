@@ -14,7 +14,7 @@ class DPSolver(Solver):
         #self.costmap = {}
 
         self.varmap  = {}
-        self.varmap_rev  = {}
+        #self.varmap_rev  = {}
         self.poses = 0
 
         # make bitmaps
@@ -66,8 +66,14 @@ class DPSolver(Solver):
     def inscope(self, clause, bag, par=None):
         #print("SCOPE ", clause, bag)
         for l in clause:
-            if abs(l) not in bag or (par is not None and abs(l) in par): #self.varmap:
+            if abs(l) not in bag: #self.varmap:
                 return False
+
+        if par is not None:
+            for l in clause:
+                if abs(l) not in par:
+                    return True
+            return False
             #else:
             #    pos = self.varmap[abs(l)]
             #    if pos not in self.varmap_rev or self.varmap_rev[pos] != abs(l):
@@ -78,27 +84,34 @@ class DPSolver(Solver):
         p = start
         while (p < self.poses):
             if mask & 1 == v:
+                #print("FIRST ", p, self.poses)
                 return p
             p = p + 1
             mask = mask >> 1
+        #print(" NO FIRST ", p, self.poses)
         return self.poses
 
+    def maxpos(self, bag):
+        self.poses = 0
+        for i in bag:
+            self.poses = max(self.poses, self.varmap[i]+1)
+        #print("SET POS ", bag, self.pos)
 
     def makeMask(self, nogood, update=None, zero_as_false=True):
         m = 0
         free = 0
         firstfree = 0
-        maxpos = 0
         if update is not None:
-            free = update
+            free = update[0]
+            self.maxpos(update[1])
+            #print("FREE ", free, self.poses)
             #for pos in self.varmap_rev: # positions in-use
             #    free = free | (1 << pos)
-            self.poses = 0
         for b in nogood:
             pos = None 
             try:
                 pos = self.varmap[abs(b)]   # already assigned?
-                print(abs(b), pos, self.varmap_rev, self.varmap)
+                #print(abs(b), pos, self.varmap)
                 if firstfree == pos:
                     firstfree = firstfree + 1
             except KeyError:
@@ -108,9 +121,8 @@ class DPSolver(Solver):
             if update is not None:
                 free = free | (1 << pos)
                 self.varmap[abs(b)] = pos
-                self.varmap_rev[pos] = abs(b)
-                maxpos = max(pos + 1, maxpos)
-                self.poses = maxpos 
+                #self.varmap_rev[pos] = abs(b)
+                self.poses = max(pos + 1, self.poses)
             if b > 0 or not zero_as_false:
                 m = m | (1 << pos) #_utils._shift(pos)
         return m
@@ -160,20 +172,37 @@ class DPSolver(Solver):
     def dp(self):
         tables = {}
        
+        # precompute non-interfering masks first
+        for n in nx.dfs_preorder_nodes(self.td, self.root):
+            u = 0
+            p = frozenset()
+            if n != self.root:
+                p = list(self.td.predecessors(n))[0]
+                u = tables[p][1]
+            
+            mask = self.makeMask(n, update=(u,p)) #bring parent mask 
+            #print("DP TRAV NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, " parent ", p, " parmap ", u)
+            tables[n] = (None, mask)
+
+
         for n in nx.dfs_postorder_nodes(self.td, self.root):
             chmasks = 0
-            cs = []
+            #cs = []
             for c in self.td.successors(n):   #child nodes
-                cs.append(c)
+                #cs.append(c)
                 chmasks = chmasks | tables[c][1]
 
-            mask = self.makeMask(n, update=chmasks)
-            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " rev ", self.varmap_rev)
+            print("chmasks ", chmasks)
+            
+            mask = tables[n][1] #self.makeMask(n, update=0)   #update max poses
+            self.maxpos(n)
+            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap)
             m = None
             if 'leaf' in self.td.nodes[n]: #n.isLeaf():
                 m = {0:0}   #empty assignment 0 : costs 0
                 print('leaf')
             else:
+                prevch = 0
                 #for c in self.td.predecessors(n):   #child nodes
                 for c in self.td.successors(n):   #child nodes
                     print("previous: ", c, tables[c][0])
@@ -190,7 +219,7 @@ class DPSolver(Solver):
                         m = mn
                     else:
                         print("joining ", mn, " with ", m)
-                        m = self.join(mn, m)
+                        m = self.join(mask, mn, chmask, m, prevch)
                         print("join ", m)
 
                     # free table
@@ -200,30 +229,49 @@ class DPSolver(Solver):
                     #for i in self.mask2pos(chmask & ~mask):
                         #assert(i in self.varmap_rev)
                     #    del self.varmap_rev[i]
+                    prevch = chmask
            
             # intr
             print("intro ", mask, " chmasks ", chmasks)
-            m = self.intro(n, cs, m, mask, chmasks)
+            m = self.intro(n, m, mask, chmasks)
             tables[n] = (m,mask)
-            print("setting ", m, " for ", n)
+            print("SETTING ", m, " for ", n)
         return tables[self.root][0]   #root table
 
 
-    #equijoin of two dicts
-    def join(self, m1, m2):
+    #equijoin of two dicts (only works if scheme is identical)
+    def join(self, mask, m1, m1mask, m2, m2mask):
+        m1mask = mask & m1mask
+        m2mask = mask & m2mask
         m = {}
-        for (k,o) in m1.items():
-            try:
-                m[k] = o + m2[k] #take sum of costs
-            except KeyError:
-                pass
+
+        if m1mask == m2mask:    #equijoin
+            for (k,o) in m1.items():
+                try:
+                    m[k] = o + m2[k]
+                except KeyError:
+                    pass
+        else:
+            for (k,o) in m1.items():
+                k = k & m2mask
+                for (k2,o2) in m2.items():
+                    k2 = k2 & m1mask
+                    if k == k2:
+                        sofar = 0
+                        try:
+                            sofar = m[k] #take sum of costs
+                        except KeyError:
+                            pass
+                        m[k] = max(sofar, o + o2)
         return m
 
 
     #fresh items at poses
-    def intro(self, bag, ch_bag, m1, mask, chmasks):
-        pos = set(bag).difference(ch_bag)
-        #pos = self.mask2pos(mask & ~chmasks)    #intro poses
+    def intro(self, bag, m1, mask, chmasks):
+        #pos = set(bag).difference(ch_bag)
+        #print(pos)
+        pos = self.mask2pos(mask & ~chmasks)    #intro poses
+        print("INTR POS ", pos)
 
         ngs = []
         for clause in self.wcnf.hard:
@@ -265,6 +313,7 @@ class DPSolver(Solver):
         m = {}
 
         for (k,o) in m1.items():
+            #print(k,o)
             o = o + self.softgood(ngs, k, chmask, mask)
             k = k & keep
             try:
