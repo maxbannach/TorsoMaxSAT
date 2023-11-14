@@ -244,24 +244,24 @@ class DPSolver(Solver):
         m1mask = mask & m1mask
         m2mask = mask & m2mask
 
-        b = None
-        if len(self.mask2pos(m1mask & ~m2mask)) < len(self.mask2pos(m2mask & ~m1mask)): #swap
-            m = m1
-            mm = m1mask
-            
-            m1 = m2
-            m1 = m2mask
-            
-            m2 = m
-            m2mask = mm
-
-        if ~m1mask & m2mask > 0:    #sth missing?
-            b = self.mask2pos(m1mask | (~m1mask & m2mask))
-            m1 = self.intro(b, m1, m1mask | (~m1mask & m2mask), m1mask)
+#        b = None
+#        if len(self.mask2pos(m1mask & ~m2mask)) < len(self.mask2pos(m2mask & ~m1mask)): #swap
+#            m = m1
+#            mm = m1mask
+#            
+#            m1 = m2
+#            m1 = m2mask
+#            
+#            m2 = m
+#            m2mask = mm
+#
+#        if ~m1mask & m2mask > 0:    #sth missing?
+#            b = self.mask2pos(m1mask | (~m1mask & m2mask))
+#            m1 = self.intro(b, m1, m1mask | (~m1mask & m2mask), m1mask)
 
         m = {}
 
-        if True: #m1mask == m2mask:    #equijoin
+        if False: #True: #m1mask == m2mask:    #equijoin
             for (k,o) in m1.items():
                 try:
                     m[k] = o + m2[k]
