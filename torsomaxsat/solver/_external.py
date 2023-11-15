@@ -8,7 +8,8 @@ class ExternalSolver(Solver):
         # Write the formula to a temporary file.
         with tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8') as temp_file:
             temp_file.write(repr(self.wcnf))
-
+            temp_file.flush()
+            
         # Try to solve it with the sub solver.
         try:
             result = subprocess.run(self.solver_cmd + " " + temp_file.name, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

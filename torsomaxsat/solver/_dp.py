@@ -41,7 +41,7 @@ class DPSolver(Solver):
 
     def solve(self):
         # compute a tree decomposition
-        g = PrimalGraph(self.wcnf)
+        g = PrimalGraph(self.wcnf, twsolver = self.twsolver)
         width, self.td, self.root = g.compute_tree_decomposition(heuristic="fillin")
 
         # execute the dp
