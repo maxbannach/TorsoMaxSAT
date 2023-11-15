@@ -218,10 +218,12 @@ class DPSolver(Solver):
                     # join
                     if m is None:
                         m = mn
+                        prevch = chmask
                     else:
                         print("joining ", mn, " with ", m)
                         m = self.join(mask, mn, chmask, m, prevch)
                         print("join ", m)
+                        prevch = (chmask & mask) | (prevch & mask)    # could be union over both
 
                     # free table
                     del tables[c]
@@ -230,7 +232,6 @@ class DPSolver(Solver):
                     #for i in self.mask2pos(chmask & ~mask):
                         #assert(i in self.varmap_rev)
                     #    del self.varmap_rev[i]
-                    prevch = chmask
            
             # intr
             print("intro ", mask, " chmasks ", chmasks)
