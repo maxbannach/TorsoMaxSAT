@@ -100,10 +100,10 @@ class DPSolver(Solver):
 
     def makeMask(self, nogood, update=None, zero_as_false=True):
         m = 0
-        free = 0
+        alloc = 0
         firstfree = 0
         if update is not None:
-            free = update[0]
+            alloc = update[0]
             self.maxpos(update[1])
             #print("FREE ", free, self.poses)
             #for pos in self.varmap_rev: # positions in-use
@@ -117,10 +117,10 @@ class DPSolver(Solver):
                     firstfree = firstfree + 1
             except KeyError:
                 assert(update is not None)
-                pos = self.first(0,free,firstfree)
+                pos = self.first(0,alloc,firstfree)
                 firstfree = pos + 1
             if update is not None:
-                free = free | (1 << pos)
+                alloc = alloc | (1 << pos)
                 self.varmap[abs(b)] = pos
                 #self.varmap_rev[pos] = abs(b)
                 self.poses = max(pos + 1, self.poses)
@@ -131,7 +131,7 @@ class DPSolver(Solver):
     def mask2pos(self, mask):
         pos = []
         for i in range(0, self.poses):
-            if mask & 1:
+            if mask & 1 > 0:
                 pos.append(i)
             mask = mask >> 1
         return pos
@@ -160,15 +160,15 @@ class DPSolver(Solver):
         return True
 
     def softgood(self, ngs, k, chmask, mask):
-        costs = 0
+        fitness = 0
         for (n,m,w,cl) in ngs:
             #print("CHECKING SOFT ", n, k, chmask, mask)
             if self.inv_nogood((n,m), k, chmask): #if we have clause -> expensive
                 print("INV soft nogood ", (n,w), " for ", k)
         # m & chmask == m and m & mask != m and k & n & m == n & m: 
         # nogood visible in child, not anymore and unmatched --> cost + 1
-                costs = costs + w  
-        return costs
+                fitness = fitness + w  
+        return fitness
 
     def dp(self):
         tables = {}
@@ -338,7 +338,7 @@ class DPSolver(Solver):
             o = o + self.softgood(ngs, k, chmask, mask)
             k = k & keep
             try:
-                m[k] = max(m[k], o) #take smallest costs
+                m[k] = max(m[k], o) #take max fitness 
             except KeyError:
                 m[k] = o
         return m
