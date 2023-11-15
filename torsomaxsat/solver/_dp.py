@@ -16,7 +16,8 @@ class DPSolver(Solver):
         self.varmap  = {}
         #self.varmap_rev  = {}
         self.poses = 0
-
+        print(wcnf.hard)
+        print(wcnf.soft)
         # make bitmaps
         #for c in self.wcnf.hard:
         #    print("hard ", c)
@@ -269,16 +270,16 @@ class DPSolver(Solver):
                     pass
         else:           # FIXME, only quadratic join ;/
             for (k,o) in m1.items():
-                k = k & m2mask
+                k = k & mask  #1,2   1,6   
                 for (k2,o2) in m2.items():
-                    k2 = k2 & m1mask
-                    if k == k2:
+                    k2 = k2 & mask
+                    if k & m2mask == k2 & m1mask:
                         sofar = 0
                         try:
-                            sofar = m[k] #take sum of costs
+                            sofar = m[k|k2] #take sum of costs
                         except KeyError:
                             pass
-                        m[k] = max(sofar, o + o2)
+                        m[k|k2] = max(sofar, o + o2)
         return m
 
 
