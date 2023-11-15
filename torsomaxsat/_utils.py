@@ -5,21 +5,6 @@ def powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
-#shift v by p positions to left
-#def _shift(p):
-    #return v << p
-#    e = 0
-#    print("shift ", p)
-#    while p > 0:
-#        e = e << 1
-#        if p & 1:   #last bit set --> set bit here also
-#            e = e | 1
-#        p = p >> 1  #shift one back
-#    print("shiftout ",  e)
-#    return e 
-
-
-
 class BiMap:
     def __init__(self):
         self.key_to_value = {}
