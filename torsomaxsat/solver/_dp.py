@@ -7,8 +7,8 @@ import functools
 
 class DPSolver(Solver):
 
-    def __init__(self, wcnf):
-        super().__init__(wcnf)
+    def __init__(self, wcnf, preprocessor):
+        super().__init__(wcnf, preprocessor)
         #self.nogoods = []
         #self.softngs = []
         #self.costmap = {}
