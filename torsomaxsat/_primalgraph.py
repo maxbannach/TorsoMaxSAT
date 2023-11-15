@@ -105,7 +105,7 @@ class PrimalGraph:
                     if line.startswith("s") or line.startswith("c"):
                         continue
                     elif line.startswith("b"):
-                        ll  = line.split(" ")
+                        ll  = line.strip().split(" ")
                         b   = int(ll[1])
                         bag = frozenset(map(int,ll[2:]))
                         bags[b] = bag
