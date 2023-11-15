@@ -67,7 +67,9 @@ class PrimalGraph:
         if self.twsolver is not None:
             wtd = self._compute_tree_decomposition_external()
             if wtd is not None: # If it worked, we return the result, otherwise we fallback to networkx.
-                return (wtd[0], wtd[1])
+                (width, td) = wtd
+                td, root = self._root_td(td) 
+                return (width, td, root)
             
         # Compute a tree decomposition with a networkx heuristic.
         if heuristic == "fillin":
