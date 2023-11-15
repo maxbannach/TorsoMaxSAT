@@ -83,13 +83,16 @@ class DPSolver(Solver):
 
     def first(self, v, mask, start=0):
         p = start
+        while start > 0:
+            mask = mask >> 1
+            start = start - 1
         while (p < self.poses):
             if mask & 1 == v:
-                #print("FIRST ", p, self.poses)
+                print("FIRST ", p, self.poses)
                 return p
             p = p + 1
             mask = mask >> 1
-        #print(" NO FIRST ", p, self.poses)
+        print(" NO FIRST ", p, self.poses)
         return self.poses
 
     def maxpos(self, bag):
@@ -105,7 +108,7 @@ class DPSolver(Solver):
         if update is not None:
             alloc = update[0]
             self.maxpos(update[1])
-            #print("FREE ", free, self.poses)
+            print("FREE ", alloc, self.poses)
             #for pos in self.varmap_rev: # positions in-use
             #    free = free | (1 << pos)
         for b in nogood:
@@ -113,12 +116,14 @@ class DPSolver(Solver):
             try:
                 pos = self.varmap[abs(b)]   # already assigned?
                 #print(abs(b), pos, self.varmap)
+                print("ASS ", abs(b), pos)
                 if firstfree == pos:
                     firstfree = firstfree + 1
             except KeyError:
                 assert(update is not None)
                 pos = self.first(0,alloc,firstfree)
                 firstfree = pos + 1
+                assert(alloc & (1 << pos) == 0)
             if update is not None:
                 alloc = alloc | (1 << pos)
                 self.varmap[abs(b)] = pos
@@ -180,9 +185,11 @@ class DPSolver(Solver):
             if n != self.root:
                 p = list(self.td.predecessors(n))[0]
                 u = tables[p][1]
-            
+                # todo: soft and hard clause assignment
             mask = self.makeMask(n, update=(u,p)) #bring parent mask 
+            print("MAKE MASK FOR ", n, mask, u, p)
             #print("DP TRAV NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, " parent ", p, " parmap ", u)
+            assert(n not in tables)
             tables[n] = (None, mask)
 
 
