@@ -68,7 +68,9 @@ class PrimalGraph:
         if self.twsolver is not None:
             wtd = self._compute_tree_decomposition_external()
             if wtd is not None: # If it worked, we return the result, otherwise we fallback to networkx.
-                return (wtd[0], wtd[1])
+                (width, td) = wtd
+                td, root = self._root_td(td) 
+                return (width, td, root)
             
         # Compute a tree decomposition with a networkx heuristic.
         if heuristic == "fillin":
@@ -76,11 +78,11 @@ class PrimalGraph:
         else:
             (width, td) = nx.algorithms.approximation.treewidth_min_degree(self.g)
 
-        # Find a suitable root.
-        td = self._root_td(td)
+        # find a suitable root
+        td, root = self._root_td(td)            
 
         # done
-        return (width, td)
+        return (width, td, root)
 
     def _compute_tree_decomposition_external(self):
         """
@@ -104,7 +106,7 @@ class PrimalGraph:
                     if line.startswith("s") or line.startswith("c"):
                         continue
                     elif line.startswith("b"):
-                        ll  = line.split(" ")
+                        ll  = line.strip().split(" ")
                         b   = int(ll[1])
                         bag = frozenset(map(int,ll[2:]))
                         bags[b] = bag
@@ -144,17 +146,22 @@ class PrimalGraph:
             for w in td.neighbors(v):
                 if w in visited:
                     continue
-                digraph.add_edge(w, v)
+                # edges to child nodes
+                digraph.add_edge(v, w)  #works with nx.dfs_postorder_nodes
                 queue.append(w)
                 visited.add(w)
 
+        # add empty artificial root
+        aroot = frozenset()
+        digraph.add_edge(aroot, root)
+        root = aroot
         # mark the root and the leaves
         digraph.nodes[root]['root'] = True
         for v in digraph.nodes:
-            if digraph.in_degree(v) == 0:
+            if digraph.out_degree(v) == 0: #works with nx.dfs_postorder_nodes
                 digraph.nodes[v]['leaf'] = True
         
-        return digraph
+        return digraph, root
     
     def compute_torso_decomposition(self):
         print("c Computing a torso-decomposition.")
