@@ -296,8 +296,8 @@ class DPSolver(Solver):
         #pos = set(bag).difference(ch_bag)
         #print(pos)
         pos = self.mask2pos(mask & ~chmasks)    #intro poses
-        if len(pos) == 0:
-            return m1
+        #if len(pos) == 0:
+        #    return m1
 
         print("INTR POS ", pos)
 
@@ -309,7 +309,7 @@ class DPSolver(Solver):
                 ngs.append(ng)
 
         m = m1
-        if len(pos) > 0:
+        if len(pos) > 0 or len(ngs) > 0:
             m = {}
             for (k,o) in m1.items():
                 for ps in _utils.powerset(pos):
