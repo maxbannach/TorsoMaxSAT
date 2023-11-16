@@ -240,9 +240,18 @@ class PrimalGraph:
         colors = ['red' if node in torso else 'lightblue' for node in td.nodes]
         nx.draw(td, pos, with_labels=False, node_size=25, node_color=colors)
 
+        # Compute the bagsize as label.
+        labels = {}
+        for bag in td.nodes:
+            labels[bag] = len(bag)
+        label_y_offset = 0.05
+        pos_labels     = {k: (x, y + label_y_offset) for k, (x, y) in pos.items()}    
+        nx.draw_networkx_labels(td, pos_labels, labels=labels, font_family='monospace', font_weight='bold', font_size=10)
+        
         # Compute a tree decomposition for comparison.
         (tw,_,_) = self.compute_tree_decomposition()
-        
+
+        plt.gcf().canvas.manager.set_window_title('Torso Decomposition')
         plt.text(0.025,0.95, format(f"Torsowidth:  {width}"), transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
         plt.text(0.025,0.92, format(f"Treewidth:   {tw}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
         plt.text(0.025,0.89, format(f"Nodes/Edges: {len(self.g)}/{len(self.g.edges)}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
