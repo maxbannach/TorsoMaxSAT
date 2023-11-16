@@ -88,11 +88,11 @@ class DPSolver(Solver):
             start = start - 1
         while (p < self.poses):
             if mask & 1 == v:
-                print("FIRST ", p, self.poses)
+                #print("FIRST ", p, self.poses)
                 return p
             p = p + 1
             mask = mask >> 1
-        print(" NO FIRST ", p, self.poses)
+        #print(" NO FIRST ", p, self.poses)
         return self.poses
 
     def maxpos(self, bag):
@@ -108,7 +108,7 @@ class DPSolver(Solver):
         if update is not None:
             alloc = update[0]
             self.maxpos(update[1])
-            print("FREE ", alloc, self.poses)
+            #print("FREE ", alloc, self.poses)
             #for pos in self.varmap_rev: # positions in-use
             #    free = free | (1 << pos)
         for b in nogood:
@@ -116,7 +116,7 @@ class DPSolver(Solver):
             try:
                 pos = self.varmap[abs(b)]   # already assigned?
                 #print(abs(b), pos, self.varmap)
-                print("ASS ", abs(b), pos)
+                #print("ASS ", abs(b), pos)
                 if firstfree == pos:
                     firstfree = firstfree + 1
             except KeyError:
@@ -166,8 +166,8 @@ class DPSolver(Solver):
 
     def softgood(self, ngs, k, chmask, mask):
         fitness = 0
-        for (n,m,w,cl) in ngs:
-            #print("CHECKING SOFT ", n, k, chmask, mask)
+        for (n,m,w) in ngs:
+            #print("CHECKING SOFT ", n, m, k, chmask, mask)
             if self.inv_nogood((n,m), k, chmask): #if we have clause -> expensive
                 print("INV soft nogood ", (n,w), " for ", k)
         # m & chmask == m and m & mask != m and k & n & m == n & m: 
@@ -178,19 +178,46 @@ class DPSolver(Solver):
     def dp(self):
         tables = {}
        
+       
+        #ngs = []
+        #for (clause,w) in self.wcnf.soft.items():
+        #    clause = [-clause]  #clause means we should have -clause
+        #    if self.inscope(clause, bag, par=par_bag):
+        #        (n,m) = self.conv2nogood(clause)
+        #        ngs.append((n,m,w,clause))
+       
+
         # precompute non-interfering masks first
         for n in nx.dfs_preorder_nodes(self.td, self.root):
-            u = 0
             p = frozenset()
+            u = 0
             if n != self.root:
                 p = list(self.td.predecessors(n))[0]
                 u = tables[p][1]
-                # todo: soft and hard clause assignment
+            
             mask = self.makeMask(n, update=(u,p)) #bring parent mask 
-            print("MAKE MASK FOR ", n, mask, u, p)
-            #print("DP TRAV NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, " parent ", p, " parmap ", u)
+            soft = []
+            for k in n:
+                if k not in p:
+                    try:
+                        w = self.wcnf.soft[k]
+                        nn,m = self.conv2nogood([-k])
+                        soft.append((nn,m,w,))
+                    except KeyError:
+                        pass
+
+            #FIXME: do faster somehow?
+            hard = []
+            for clause in self.wcnf.hard:
+                if self.inscope(clause, n):
+                    ng = self.conv2nogood(clause)
+                    #if n & mask == n:
+                    hard.append(ng)
+
             assert(n not in tables)
-            tables[n] = (None, mask)
+            tables[n] = (None, mask, hard, soft)
+            print(tables)
+        #assert(False)
 
 
         for n in nx.dfs_postorder_nodes(self.td, self.root):
@@ -200,12 +227,12 @@ class DPSolver(Solver):
                 #cs.append(c)
                 chmasks = chmasks | tables[c][1]
 
-            print("chmasks ", chmasks)
+            #print("chmasks ", chmasks)
             
-            mask = tables[n][1] #self.makeMask(n, update=0)   #update max poses
+            _,mask,hard,nsoft = tables[n] #self.makeMask(n, update=0)   #update max poses
             self.maxpos(n)
-            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap)
-            m = None
+            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, soft)
+            #m = None
             if 'leaf' in self.td.nodes[n]: #n.isLeaf():
                 m = {0:0}   #empty assignment 0 : costs 0
                 print('leaf')
@@ -214,13 +241,15 @@ class DPSolver(Solver):
                 #for c in self.td.predecessors(n):   #child nodes
                 for c in self.td.successors(n):   #child nodes
                     print("previous: ", c, tables[c][0])
-                    chmask = tables[c][1] #self.td.bag(c))
+                    #chmask = tables[c][1] #self.td.bag(c))
                     
-                    # grab table
-                    mn = tables[c][0]
+                    # grab table and soft (soft is 1 level behind)
+                    mn,chmask,_,soft = tables[c]
+                    #soft = tables[c][3]
                     # project
                     #mn = self.forget(list(self.td.predecessors(n))[0], mn, mask, chmask)
-                    mn = self.forget(c, n, mn, mask, chmask)
+                    #mn = self.forget(c,n,soft, mn, mask, chmask)
+                    mn = self.forget(soft, mn, mask, chmask)
                     print("project ", mn, " mask ", mask, " chmask ", chmask)
                     # join
                     if m is None:
@@ -242,8 +271,8 @@ class DPSolver(Solver):
            
             # intr
             print("intro ", mask, " chmasks ", chmasks)
-            m = self.intro(n, m, mask, chmasks)
-            tables[n] = (m,mask)
+            m = self.intro(hard, m, mask, chmasks)
+            tables[n] = (m,mask,hard,nsoft)
             print("SETTING ", m, " for ", n)
         return tables[self.root][0]   #root table
 
@@ -292,7 +321,7 @@ class DPSolver(Solver):
 
 
     #fresh items at poses
-    def intro(self, bag, m1, mask, chmasks):
+    def intro(self, hard, m1, mask, chmasks):
         #pos = set(bag).difference(ch_bag)
         #print(pos)
         pos = self.mask2pos(mask & ~chmasks)    #intro poses
@@ -301,15 +330,9 @@ class DPSolver(Solver):
 
         print("INTR POS ", pos)
 
-        ngs = []
-        for clause in self.wcnf.hard:
-            if self.inscope(clause, bag):
-                ng = self.conv2nogood(clause)
-                #if n & mask == n:
-                ngs.append(ng)
-
+        #FIXME: avoid copying in some cases?
         m = m1
-        if len(pos) > 0 or len(ngs) > 0:
+        if len(pos) > 0 or len(hard) > 0:
             m = {}
             for (k,o) in m1.items():
                 for ps in _utils.powerset(pos):
@@ -317,32 +340,35 @@ class DPSolver(Solver):
                     for p in ps:
                         kk = kk | (1 << p)
                     #print(kk)
-                    if self.good(ngs, kk, mask):   #no nogood invalidated
+                    if self.good(hard, kk, mask):   #no nogood invalidated
                         m[kk] = o
         return m
 
     #project according to bitmask
-    def forget(self, bag, par_bag, m1, mask, chmask):
+    #def forget(self, bag, par_bag, soft, m1, mask, chmask):
+    def forget(self, soft, m1, mask, chmask):
         keep = mask & chmask
 
-        ngs = []
-        for (clause,w) in self.wcnf.soft.items():
-            #print("candidate soft nogood ", clause)
-            clause = [-clause]  #clause means we should have -clause
-            if self.inscope(clause, bag, par=par_bag):
-                (n,m) = self.conv2nogood(clause)
-                #if n & mask != n: # and m & mask != m:
-                ngs.append((n,m,w,clause))
-                #else:
-                #    print(clause, bag, n, chmask, m, mask)
-                #    assert(False)
-       
-        print("soft nogoods ", mask, chmask, ngs)
+        #ngs = []
+        #for (clause,w) in self.wcnf.soft.items():
+        #    #print("candidate soft nogood ", clause)
+        #    clause = [-clause]  #clause means we should have -clause
+        #    if self.inscope(clause, bag, par=par_bag):
+        #        (n,m) = self.conv2nogood(clause)
+        #        #if n & mask != n: # and m & mask != m:
+        #        ngs.append((n,m,w))
+        #        #else:
+        #        #    print(clause, bag, n, chmask, m, mask)
+        #        #    assert(False)
+        #print(" SOFT vs ", soft, ngs)
+
+#        soft = ngs
+        print("soft nogoods ", mask, chmask, soft)
         m = {}
 
         for (k,o) in m1.items():
             #print(k,o)
-            o = o + self.softgood(ngs, k, chmask, mask)
+            o = o + self.softgood(soft, k, chmask, mask)
             k = k & keep
             try:
                 m[k] = max(m[k], o) #take max fitness 
