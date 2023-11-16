@@ -216,7 +216,7 @@ class DPSolver(Solver):
 
             assert(n not in tables)
             tables[n] = (None, mask, hard, soft)
-            print(tables)
+            #print(tables)
         #assert(False)
 
 
@@ -232,7 +232,7 @@ class DPSolver(Solver):
             _,mask,hard,nsoft = tables[n] #self.makeMask(n, update=0)   #update max poses
             self.maxpos(n)
             print("NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, soft)
-            #m = None
+            m = None
             if 'leaf' in self.td.nodes[n]: #n.isLeaf():
                 m = {0:0}   #empty assignment 0 : costs 0
                 print('leaf')
@@ -363,7 +363,7 @@ class DPSolver(Solver):
         #print(" SOFT vs ", soft, ngs)
 
 #        soft = ngs
-        print("soft nogoods ", mask, chmask, soft)
+        #print("soft nogoods ", mask, chmask, soft)
         m = {}
 
         for (k,o) in m1.items():
