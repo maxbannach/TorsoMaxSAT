@@ -56,7 +56,7 @@ def Torso(g, cost = 10, k = 50, timeout = 30):
         torso.clear()
         for a in [atom for atom in model.symbols(shown=True) if atom.name == "torso"]:
             torso.append(a.arguments[0].number)
-        print(f"c Found a new torso of length {len(torso)}.")
+        print(f"c Found a new torso of size {len(torso)}.")
 
     # Pack everything to a function ...
     def solver(control, model_callback):

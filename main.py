@@ -25,7 +25,8 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--file", type=argparse.FileType("r"), default=sys.stdin, help="Input formula (as DIMACS2022 wcnf). Default is stdin.")
     parser.add_argument('-p', '--primal',  action='store_true', help='Just output the primal graph of the instance.')
     parser.add_argument('-d', '--display', action='store_true', help='Just produces a visual display of the instance.')    
-    parser.add_argument('-tw', action='store_true', help='Estimate the treewidth of the formula and quit.')    
+    parser.add_argument('-tw', action='store_true', help='Estimate the treewidth of the formula and quit.')
+    parser.add_argument('-to', action='store_true', help='Computes and visualizes information about the torso of the formula and quit.')
     parser.add_argument("--maxpre", help="Path to the maxpre2 preprocessor.")
     
     # Parse the arguments and map them to internal objects.
@@ -71,7 +72,11 @@ if __name__ == "__main__":
         (tw,_) = g.compute_tree_decomposition()
         print(tw)
         sys.exit(0)
-        
+    if args.to:        
+        g = PrimalGraph(phi, external = True, twsolver = args.twsolver)
+        g.compute_torso_decomposition()
+        sys.exit(0)
+
     # Initialize the selected solver.
     if args.solver == "gurobi":
         solver = GurobiSolver(phi, preprocessor = args.maxpre)

@@ -2,6 +2,7 @@ import itertools
 import networkx          as nx
 import matplotlib.pyplot as plt
 import tempfile, subprocess, os
+from torsomaxsat import Torso
 
 def _separation(g):
     """
@@ -154,6 +155,40 @@ class PrimalGraph:
                 digraph.nodes[v]['leaf'] = True
         
         return digraph
+    
+    def compute_torso_decomposition(self):
+        print("c Computing a torso-decomposition.")
+        
+        # First compute the torso.
+        torso_nodes = Torso(self.g, timeout=60)
+        torso_graph = nx.Graph(self.g.subgraph(torso_nodes))
+        
+        # Complete the boarders of the torso into cliques.        
+        h = nx.Graph(self.g)
+        h.remove_nodes_from(torso_nodes)
+        for c in nx.connected_components(h):
+            for (u,v) in itertools.combinations(_neighbors_of_set_in(self.g, c, torso_nodes), 2):
+                torso_graph.add_edge(u, v)
+        
+        # Compute a tree decomposition of the torso.
+        (width, td) = nx.algorithms.approximation.treewidth_min_fill_in(torso_graph)
+        print(f"c Treewidth of the torso: {width}")
+        
+        # Compute the torso decomposition by adding the remaining components.
+        torso_td = nx.Graph(td)
+        for c in nx.connected_components(h):
+            node      = frozenset(c)
+            neighbors = _neighbors_of_set_in(self.g, c, torso_nodes)
+            for bag in torso_td.nodes:
+                if neighbors.issubset(bag):
+                    torso_td.add_edge(node,bag)
+                    break
+            
+        # display the graph for debugging
+        pos    = nx.spring_layout(torso_td, seed=42)
+        colors = ['red' if node in td.nodes else 'lightblue' for node in torso_td.nodes]
+        nx.draw(torso_td, pos, with_labels=False, node_size=25, node_color=colors)
+        plt.show()
                 
     def __str__(self):
         """
