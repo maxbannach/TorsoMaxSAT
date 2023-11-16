@@ -69,12 +69,13 @@ if __name__ == "__main__":
         sys.exit(0)
     if args.tw:
         g = PrimalGraph(phi, external = True, twsolver = args.twsolver)
-        (tw,_) = g.compute_tree_decomposition()
+        (tw,_,_) = g.compute_tree_decomposition()
         print(tw)
         sys.exit(0)
     if args.to:        
         g = PrimalGraph(phi, external = True, twsolver = args.twsolver)
-        g.compute_torso_decomposition()
+        (tw,td,root,torso) = g.compute_torso_decomposition(timeout=10)
+        g.display_torso(tw,td,root,torso)        
         sys.exit(0)
 
     # Initialize the selected solver.

@@ -163,11 +163,24 @@ class PrimalGraph:
         
         return digraph, root
     
-    def compute_torso_decomposition(self):
+    def compute_torso_decomposition(self, timeout = 60):
+        """
+        Computes a subset of the graph called the torso, which hopefully has small treewidth.
+        The remaining parts of the graph are connected as huge bags to a tree decomposition of the torso.
+
+        Optional Arguments:
+          - timeout: Number of seconds allowed to compute a torso (default 60).
+        
+        Returns a four-tuple:
+          - the width of the torso
+          - a tree decomposition of the graph, in which some part has the above mentioned width
+          - a root node of the decomposition
+          - a set of nodes that induce the torso
+        """
         print("c Computing a torso-decomposition.")
         
         # First compute the torso.
-        torso_nodes = Torso(self.g, timeout=60)
+        torso_nodes = Torso(self.g, timeout = timeout)
         torso_graph = nx.Graph(self.g.subgraph(torso_nodes))
         
         # Complete the boarders of the torso into cliques.        
@@ -190,13 +203,13 @@ class PrimalGraph:
                 if neighbors.issubset(bag):
                     torso_td.add_edge(node,bag)
                     break
-            
-        # display the graph for debugging
-        pos    = nx.spring_layout(torso_td, seed=42)
-        colors = ['red' if node in td.nodes else 'lightblue' for node in torso_td.nodes]
-        nx.draw(torso_td, pos, with_labels=False, node_size=25, node_color=colors)
-        plt.show()
-                
+
+        # Root the decomposition.
+        torso_td, root = self._root_td(torso_td)
+
+        # done
+        return (width, torso_td, root, td.nodes)
+                            
     def __str__(self):
         """
         Prints the graph in the format of PACE (which is similar to the DIMACS format).
@@ -218,5 +231,20 @@ class PrimalGraph:
             nx.draw(self.g, pos, with_labels=False, node_size=25, node_color=colors)
         else:
             nx.draw(self.g, pos, with_labels=False, node_size=25, node_color='lightblue')
+        plt.show()
+
+    def display_torso(self, width, td, root, torso):
+        
+        # Render the torso decomposition.
+        pos    = nx.spring_layout(td, seed=42)
+        colors = ['red' if node in torso else 'lightblue' for node in td.nodes]
+        nx.draw(td, pos, with_labels=False, node_size=25, node_color=colors)
+
+        # Compute a tree decomposition for comparison.
+        (tw,_,_) = self.compute_tree_decomposition()
+        
+        plt.text(0.025,0.95, format(f"Torsowidth:  {width}"), transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
+        plt.text(0.025,0.92, format(f"Treewidth:   {tw}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
+        plt.text(0.025,0.89, format(f"Nodes/Edges: {len(self.g)}/{len(self.g.edges)}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
         plt.show()
 
