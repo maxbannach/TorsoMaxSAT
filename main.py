@@ -103,6 +103,13 @@ if __name__ == "__main__":
     tstart = time.time()
     solver.preprocess_and_solve()
     print(f"c Solved with {args.solver} in {(time.time()-tstart):06.2f}s")
+
+    # Report the results.
+    if solver.state == State.ERROR:
+        print("c")
+        print("c Solver was unable to find a solution.")
+        print("c")
+        sys.exit(0)
     
     # Report the results.
     if solver.state == State.UNSAT:
@@ -115,7 +122,10 @@ if __name__ == "__main__":
     print("c")
 
     # MSE output.
-    print("s OPTIMUM FOUND")
+    if solver.state == State.OPTIMAL:
+        print("s OPTIMUM FOUND")
+    else:
+        print("s UNKNOWN")
     print(f"o {solver.get_cost()}")
     for (i,l) in enumerate( phi._to_external_model(solver.assignment) ):
         if i % 25 == 0:

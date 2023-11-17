@@ -12,7 +12,6 @@ class ExternalSolver(Solver):
         super().__init__(wcnf, preprocessor)
         self.solver_cmd = solver_cmd
         self.timeout    = timeout
-
     
     def solve(self):
 
@@ -24,11 +23,15 @@ class ExternalSolver(Solver):
         # Try to solve it with the sub solver.
         try:
             if self.timeout is None:
-                result = subprocess.run(self.solver_cmd + " " + temp_file.name, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                result = subprocess.run(self.solver_cmd + " " + temp_file.name,
+                                          shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             else:
-                result = subprocess.run(self.solver_cmd + " " + temp_file.name, timeout = self.timeout, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                result = subprocess.run("timeout --preserve-status " + str(self.timeout) + " "
+                                        + self.solver_cmd + " " + temp_file.name,
+                                          shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             output = result.stdout           
-            if result.returncode == 0 or result.returncode == 10:
+            self.state = State.ERROR
+            if result.returncode == 0 or result.returncode == 10 or result.returncode == 40:
                 for line in output.splitlines():
                     # Parse the statae of the sub solver.
                     if line.startswith("s"):
@@ -41,15 +44,12 @@ class ExternalSolver(Solver):
                     # Parse the optimum value.
                     if line.startswith("o"):
                         self.fitness = self.wcnf._max_fitness() - float(line.split(" ")[1])
+                        if self.state != State.OPTIMAL:
+                            self.state = State.UNKNOWN
 
                     # Parse the assignment.
                     if line.startswith("v"):
                         self.assignment = list(map(lambda x: int(x), line.split(" ")[1]))                
-            else:
-                print("c External solver failed with an error.")
-                sys.exit(1)
-        except TimeoutExpired:
-            print("c Sub solver timed out after {} seconds.".format(timeout))
         except subprocess.CalledProcessError as e:
             print("c Error executing the sub solver:", e)
             sys.exit(1)
