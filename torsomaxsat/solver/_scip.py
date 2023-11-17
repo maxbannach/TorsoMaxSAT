@@ -23,7 +23,7 @@ class ScipSolver(Solver):
                     bound  -= 1
                 else:
                     clause.append( ilp_vars[abs(l)] )
-            scip.addCons( sp.quicksum(l for l in clause) >= bound )
+            scip.addCons( sp.quicksum(clause) >= bound )
 
         # adding the soft clauses
         obj = []

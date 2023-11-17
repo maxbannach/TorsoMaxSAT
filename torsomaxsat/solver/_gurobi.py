@@ -15,6 +15,10 @@ class GurobiSolver(Solver):
         # build a Gurobi model
         gurobi = gp.Model(env=env)
 
+        # improve integer variables
+        gurobi.Params.IntFeasTol       = 1e-09
+        gurobi.Params.IntegralityFocus = 1
+        
         # adding the variables
         ilp_vars = [0]
         for i in range(1,self.wcnf.n+1):
@@ -23,20 +27,20 @@ class GurobiSolver(Solver):
         # adding the hard clauses
         for c in self.wcnf.hard:
             bound  = 1
-            clause = gp.LinExpr()
-            for l in c:        
+            clause = []
+            for l in c:
                 if l < 0:
-                    clause += -1 * ilp_vars[abs(l)]
-                    bound  -= 1
+                    clause.append( -1*ilp_vars[abs(l)] )
+                    bound -= 1
                 else:
-                    clause += ilp_vars[abs(l)]
-            gurobi.addConstr( clause >= bound )
+                    clause.append( ilp_vars[abs(l)] )
+            gurobi.addConstr(gp.quicksum(clause) >= bound)
 
         # adding the soft clauses
-        obj = gp.LinExpr()
+        obj = []
         for v in self.wcnf.soft:
-            obj += ilp_vars[v] * self.wcnf.soft[v]
-        gurobi.setObjective(obj, GRB.MAXIMIZE)
+            obj.append( (ilp_vars[abs(v)], self.wcnf.soft[v]) )
+        gurobi.setObjective(gp.quicksum( x*w for (x, w) in obj ), GRB.MAXIMIZE)
         
         # solving the model
         gurobi.optimize()
