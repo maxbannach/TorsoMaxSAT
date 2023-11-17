@@ -19,8 +19,8 @@ if __name__ == "__main__":
     # Program info and argument parsing.
     parser = argparse.ArgumentParser(description='A MaxSAT solver based on Tree Decompositions of the Torso Graph.')
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
-    parser.add_argument("-s", "--solver", choices=["gurobi", "scip", "rc2", "fm", "ortools", "dp", "external"], help="Base solvere used.", default="rc2")
-    parser.add_argument("--externalsolver", help="Command to execute an external solver.")
+    parser.add_argument("-s", "--solver", help="Base solvere used. \
+    Implemented solvers are [gurobi, scip, rc2, fm, ortools, dp]. An external <cmd> can also be provided.", default="rc2")
     parser.add_argument("-t", "--twsolver", help="Command to execute an external treewidth solver (PACE compatible).")
     parser.add_argument("-f", "--file", type=argparse.FileType("r"), default=sys.stdin, help="Input formula (as DIMACS2022 wcnf). Default is stdin.")
     parser.add_argument('-p', '--primal',  action='store_true', help='Just output the primal graph of the instance.')
@@ -28,6 +28,8 @@ if __name__ == "__main__":
     parser.add_argument('-tw', action='store_true', help='Estimate the treewidth of the formula and quit.')
     parser.add_argument('-to', action='store_true', help='Computes and visualizes information about the torso of the formula and quit.')
     parser.add_argument("--maxpre", help="Path to the maxpre2 preprocessor.")
+
+    parser.add_argument("-x", "--xover", choices=["a", "b", "c", "external"], help="The xover used.", default="a")
     
     # Parse the arguments and map them to internal objects.
     args  = parser.parse_args()
@@ -56,8 +58,8 @@ if __name__ == "__main__":
     print(f"c Variables:    {phi.n}")
     print(f"c Hard Clauses: {len(phi.hard)}")
     print(f"c Soft Clauses: {len(phi.soft)}")
-    print("c")
-
+    print("c", flush = True)
+    
     # Auxillary modes.
     if args.primal:
         g = PrimalGraph(phi, external = True, twsolver = args.twsolver)
@@ -68,7 +70,9 @@ if __name__ == "__main__":
         g.display()
         sys.exit(0)
     if args.tw:
+        print("c Computing the primal graph.")
         g = PrimalGraph(phi, external = True, twsolver = args.twsolver)
+        print("c Computing a tree decomposition.")
         (tw,_,_) = g.compute_tree_decomposition()
         print(tw)
         sys.exit(0)
@@ -92,12 +96,8 @@ if __name__ == "__main__":
     elif args.solver == "dp":
         solver = DPSolver(phi,     preprocessor = args.maxpre)
         solver.twsolver = args.twsolver
-    elif args.solver == "external":
-        if not args.externalsolver:
-            print("c\nc Error: Solver <external> is used but no external solver was specified.\nc")
-            sys.exit(1)
-        solver = ExternalSolver(phi, preprocessor = args.maxpre)
-        solver.solver_cmd = args.externalsolver
+    elif args.solver is not None:
+        solver = ExternalSolver(phi, args.solver, preprocessor = args.maxpre)
 
     # Solve the instance.
     tstart = time.time()
