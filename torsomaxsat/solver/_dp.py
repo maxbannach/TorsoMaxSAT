@@ -2,6 +2,8 @@ from torsomaxsat import Solver
 from torsomaxsat import State
 from torsomaxsat import PrimalGraph
 from torsomaxsat import _utils
+from torsomaxsat import _wcnf
+#from torsomaxsat import _gurobi
 import networkx as nx
 import functools
 
@@ -13,6 +15,7 @@ class DPSolver(Solver):
         #self.softngs = []
         #self.costmap = {}
 
+        self.nodes = None
         self.varmap  = {}
         #self.varmap_rev  = {}
         self.poses = 0
@@ -42,7 +45,8 @@ class DPSolver(Solver):
     def solve(self):
         # compute a tree decomposition
         g = PrimalGraph(self.wcnf, twsolver = self.twsolver)
-        width, self.td, self.root = g.compute_tree_decomposition(heuristic="fillin")
+        #width, self.td, self.root = g.compute_tree_decomposition(heuristic="fillin")
+        width, self.td, self.root, self.nodes = g.compute_torso_decomposition()
 
         # execute the dp
         t=self.dp()
@@ -186,9 +190,15 @@ class DPSolver(Solver):
         #        (n,m) = self.conv2nogood(clause)
         #        ngs.append((n,m,w,clause))
        
-
         # precompute non-interfering masks first
         for n in nx.dfs_preorder_nodes(self.td, self.root):
+            subbags = []
+            delhard = []
+
+            # skip subproblem nodes
+            print("PREPARE ", n, self.nodes)
+            if self.nodes is not None and n not in self.nodes:
+                subbags.append(n)
             p = frozenset()
             u = 0
             if n != self.root:
@@ -208,43 +218,82 @@ class DPSolver(Solver):
 
             #FIXME: do faster somehow?
             hard = []
+
+            subhard = _wcnf.WCNF() 
+            pos = 0
             for clause in self.wcnf.hard:
                 if self.inscope(clause, n):
                     ng = self.conv2nogood(clause)
                     #if n & mask == n:
-                    hard.append(ng)
+                    hard.append(ng) 
+                else:
+                    for nn in subbags:
+                        if self.inscope(clause, nn):
+                            subhard.add_clause(clause)
+                            for k in nn:
+                                w = None
+                                try:
+                                    w=self.wcnf.soft[k]
+                                except KeyError:
+                                    pass
+                                if w is not None:
+                                    subhard.add_clause([k], weight=float(w))
+                                    del self.wcnf.soft[k]
+                            #print(" DEL ", pos)
+                            delhard.append(pos)
+                            break
+                pos = pos + 1
+          
+            #print(delhard, len(self.wcnf.hard))
+            pos = 0
+            for d in delhard:
+                #print(d,pos,d-pos,len(self.wcnf.hard))
+                del self.wcnf.hard[d-pos]
+                pos = pos + 1
 
             assert(n not in tables)
-            tables[n] = (None, mask, hard, soft)
+            tables[n] = (None, mask, hard, soft, subhard)
             #print(tables)
         #assert(False)
 
 
         for n in nx.dfs_postorder_nodes(self.td, self.root):
+            if self.nodes is not None and n not in self.nodes:
+                print("skip ", n)
+                continue
             chmasks = 0
             #cs = []
             for c in self.td.successors(n):   #child nodes
                 #cs.append(c)
-                chmasks = chmasks | tables[c][1]
+                try:
+                    chmasks = chmasks | tables[c][1]
+                except KeyError:
+                    continue        # found subproblems
 
             #print("chmasks ", chmasks)
             
-            _,mask,hard,nsoft = tables[n] #self.makeMask(n, update=0)   #update max poses
+            _,mask,hard,nsoft,subhard = tables[n] #self.makeMask(n, update=0)   #update max poses
             self.maxpos(n)
-            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, soft)
+            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, soft, " subhard ", subhard.hard, subhard.soft)
             m = None
             if 'leaf' in self.td.nodes[n]: #n.isLeaf():
                 m = {0:0}   #empty assignment 0 : costs 0
                 print('leaf')
             else:
                 prevch = 0
+                mn,chmask,_,soft = (None, None, None, None)
+                #subbags = []
                 #for c in self.td.predecessors(n):   #child nodes
                 for c in self.td.successors(n):   #child nodes
+                    try:
+                        mn,chmask,_,soft,_ = tables[c]
+                    except KeyError:
+                        #subbags.append(c)
+                        continue
                     print("previous: ", c, tables[c][0])
                     #chmask = tables[c][1] #self.td.bag(c))
                     
                     # grab table and soft (soft is 1 level behind)
-                    mn,chmask,_,soft = tables[c]
                     #soft = tables[c][3]
                     # project
                     #mn = self.forget(list(self.td.predecessors(n))[0], mn, mask, chmask)
@@ -271,8 +320,8 @@ class DPSolver(Solver):
            
             # intr
             print("intro ", mask, " chmasks ", chmasks)
-            m = self.intro(hard, m, mask, chmasks)
-            tables[n] = (m,mask,hard,nsoft)
+            m = self.intro(hard, m, mask, chmasks,subhard)
+            tables[n] = (m,mask,hard,nsoft,subhard)
             print("SETTING ", m, " for ", n)
         return tables[self.root][0]   #root table
 
@@ -321,7 +370,7 @@ class DPSolver(Solver):
 
 
     #fresh items at poses
-    def intro(self, hard, m1, mask, chmasks):
+    def intro(self, hard, m1, mask, chmasks, subhard):
         #pos = set(bag).difference(ch_bag)
         #print(pos)
         pos = self.mask2pos(mask & ~chmasks)    #intro poses
@@ -341,7 +390,11 @@ class DPSolver(Solver):
                         kk = kk | (1 << p)
                     #print(kk)
                     if self.good(hard, kk, mask):   #no nogood invalidated
-                        m[kk] = o
+                        if subhard.n > 0:
+                            subs = _gurobi.GurobiSolver(subhard)
+                            subs.solve()
+                            assert(subs.state == State.OPTIMAL)
+                            m[kk] = subs.fitness + o
         return m
 
     #project according to bitmask
@@ -365,7 +418,7 @@ class DPSolver(Solver):
 #        soft = ngs
         #print("soft nogoods ", mask, chmask, soft)
         m = {}
-
+        #print(m1)
         for (k,o) in m1.items():
             #print(k,o)
             o = o + self.softgood(soft, k, chmask, mask)
