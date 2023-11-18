@@ -207,8 +207,12 @@ class PrimalGraph:
         # Root the decomposition.
         torso_td, root = self._root_td(torso_td)
 
+        # Original nodes
+        torso_nodes = set(td.nodes)
+        torso_nodes.add(frozenset())    #_root_td adds an empty root that would be missing from torso_nodes
+
         # done
-        return (width, torso_td, root, td.nodes)
+        return (width, torso_td, root, torso_nodes)
                             
     def __str__(self):
         """

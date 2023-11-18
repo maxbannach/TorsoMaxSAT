@@ -3,9 +3,10 @@ from torsomaxsat import State
 from torsomaxsat import PrimalGraph
 from torsomaxsat import _utils
 from torsomaxsat import _wcnf
-#from torsomaxsat import _gurobi
+from torsomaxsat.solver import _gurobi
 import networkx as nx
 import functools
+import copy
 
 class DPSolver(Solver):
 
@@ -49,7 +50,7 @@ class DPSolver(Solver):
         width, self.td, self.root, self.nodes = g.compute_torso_decomposition()
 
         # execute the dp
-        t=self.dp()
+        t=self.dp(self.prepare_dp())
         # only at most 1 row at the root
         assert(len(t) <= 1)
         if len(t) > 0:
@@ -179,7 +180,7 @@ class DPSolver(Solver):
                 fitness = fitness + w  
         return fitness
 
-    def dp(self):
+    def prepare_dp(self):
         tables = {}
        
        
@@ -191,14 +192,12 @@ class DPSolver(Solver):
         #        ngs.append((n,m,w,clause))
        
         # precompute non-interfering masks first
+        # assign bag formulas and subformulas
         for n in nx.dfs_preorder_nodes(self.td, self.root):
-            subbags = []
-            delhard = []
-
             # skip subproblem nodes
-            print("PREPARE ", n, self.nodes)
             if self.nodes is not None and n not in self.nodes:
-                subbags.append(n)
+                continue
+            print("PREPARE ", n, self.nodes, self.root)
             p = frozenset()
             u = 0
             if n != self.root:
@@ -206,6 +205,45 @@ class DPSolver(Solver):
                 u = tables[p][1]
             
             mask = self.makeMask(n, update=(u,p)) #bring parent mask 
+                        
+            hard = []
+            delhard = []
+
+            pos = 0
+            sub = _wcnf.WCNF() 
+            
+            #FIXME: make faster somehow? --> better data structure like SDD?
+            for clause in self.wcnf.hard:
+                if self.inscope(clause, n):
+                    ng = self.conv2nogood(clause)
+                    #if n & mask == n:
+                    hard.append(ng) 
+                elif self.nodes is not None:
+                    for nn in self.td.successors(n):   #child nodes
+                        if nn not in self.nodes:    # only take the subproblem nodes
+                            if self.inscope(clause, nn):
+                                sub.add_clause(clause)
+                                for k in nn:
+                                    w = None
+                                    try:
+                                        w=self.wcnf.soft[k]
+                                    except KeyError:
+                                        pass
+                                    if w is not None:
+                                        sub.add_clause([k], weight=float(w))
+                                        del self.wcnf.soft[k]   # never do soft constraints twice!
+                                #print(" DEL ", pos)
+                                delhard.append(pos)
+                                break
+                pos = pos + 1
+          
+            #print(delhard, len(self.wcnf.hard))
+            pos = 0
+            for d in delhard:
+                #print(d,pos,d-pos,len(self.wcnf.hard))
+                del self.wcnf.hard[d-pos]
+                pos = pos + 1
+
             soft = []
             for k in n:
                 if k not in p:
@@ -216,47 +254,15 @@ class DPSolver(Solver):
                     except KeyError:
                         pass
 
-            #FIXME: do faster somehow?
-            hard = []
-
-            subhard = _wcnf.WCNF() 
-            pos = 0
-            for clause in self.wcnf.hard:
-                if self.inscope(clause, n):
-                    ng = self.conv2nogood(clause)
-                    #if n & mask == n:
-                    hard.append(ng) 
-                else:
-                    for nn in subbags:
-                        if self.inscope(clause, nn):
-                            subhard.add_clause(clause)
-                            for k in nn:
-                                w = None
-                                try:
-                                    w=self.wcnf.soft[k]
-                                except KeyError:
-                                    pass
-                                if w is not None:
-                                    subhard.add_clause([k], weight=float(w))
-                                    del self.wcnf.soft[k]
-                            #print(" DEL ", pos)
-                            delhard.append(pos)
-                            break
-                pos = pos + 1
-          
-            #print(delhard, len(self.wcnf.hard))
-            pos = 0
-            for d in delhard:
-                #print(d,pos,d-pos,len(self.wcnf.hard))
-                del self.wcnf.hard[d-pos]
-                pos = pos + 1
-
             assert(n not in tables)
-            tables[n] = (None, mask, hard, soft, subhard)
+            tables[n] = (None, mask, hard, soft, sub)
             #print(tables)
         #assert(False)
+        return tables
 
 
+    def dp(self, tables):
+        # dp
         for n in nx.dfs_postorder_nodes(self.td, self.root):
             if self.nodes is not None and n not in self.nodes:
                 print("skip ", n)
@@ -272,9 +278,9 @@ class DPSolver(Solver):
 
             #print("chmasks ", chmasks)
             
-            _,mask,hard,nsoft,subhard = tables[n] #self.makeMask(n, update=0)   #update max poses
+            _,mask,hard,nsoft,sub = tables[n] #self.makeMask(n, update=0)   #update max poses
             self.maxpos(n)
-            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, soft, " subhard ", subhard.hard, subhard.soft)
+            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, nsoft, " sub ", sub.hard, sub.soft)
             m = None
             if 'leaf' in self.td.nodes[n]: #n.isLeaf():
                 m = {0:0}   #empty assignment 0 : costs 0
@@ -320,8 +326,8 @@ class DPSolver(Solver):
            
             # intr
             print("intro ", mask, " chmasks ", chmasks)
-            m = self.intro(hard, m, mask, chmasks,subhard)
-            tables[n] = (m,mask,hard,nsoft,subhard)
+            m = self.intro(hard, m, mask, chmasks, sub)
+            tables[n] = (m,mask,hard,nsoft,sub)
             print("SETTING ", m, " for ", n)
         return tables[self.root][0]   #root table
 
@@ -370,7 +376,7 @@ class DPSolver(Solver):
 
 
     #fresh items at poses
-    def intro(self, hard, m1, mask, chmasks, subhard):
+    def intro(self, hard, m1, mask, chmasks, sub):
         #pos = set(bag).difference(ch_bag)
         #print(pos)
         pos = self.mask2pos(mask & ~chmasks)    #intro poses
@@ -381,20 +387,33 @@ class DPSolver(Solver):
 
         #FIXME: avoid copying in some cases?
         m = m1
-        if len(pos) > 0 or len(hard) > 0:
+        wcnf = None
+        if len(pos) > 0 or len(hard) > 0 or sub.n > 0:
             m = {}
             for (k,o) in m1.items():
                 for ps in _utils.powerset(pos):
                     kk = k 
                     for p in ps:
                         kk = kk | (1 << p)
+                        if sub.n > 0:
+                            if wcnf is None:
+                                wcnf = copy.deepcopy(sub)
+                            wcnf.add_clause([p])    # add positive literal occurrences
+                    if wcnf is not None:    # add negative literal occurrences
+                        for p in pos:
+                            if p not in ps:
+                                wcnf.add_clause([-p])
+
                     #print(kk)
                     if self.good(hard, kk, mask):   #no nogood invalidated
-                        if subhard.n > 0:
-                            subs = _gurobi.GurobiSolver(subhard)
+                        if wcnf is not None:
+                            print("SOLVING SUBINSTANCE ", wcnf.hard, wcnf.soft)
+                            subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
                             subs.solve()
+                            wcnf = None
                             assert(subs.state == State.OPTIMAL)
-                            m[kk] = subs.fitness + o
+                            o = o + subs.fitness
+                        m[kk] = o 
         return m
 
     #project according to bitmask
