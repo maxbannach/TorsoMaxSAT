@@ -55,10 +55,10 @@ if __name__ == "__main__":
 
     # Print some stats.
     print(f"c After translating to internal format:")
-    print(f"c Variables:    {phi.n}")
-    print(f"c Hard Clauses: {len(phi.hard)}")
-    print(f"c Soft Clauses: {len(phi.soft)}")
-    print("c", flush = True)
+    print(f"c ├─ Variables:    {phi.n}")
+    print(f"c ├─ Hard Clauses: {len(phi.hard)}")
+    print(f"c ├─ Soft Clauses: {len(phi.soft)}")
+    print( "c └─────────────────────────────────────", flush = True)
     
     # Auxillary modes.
     if args.primal:

@@ -1,10 +1,14 @@
+import torsomaxsat as tms
+import networkx    as nx
+import itertools
+
 import clingo
 from clingo import Control
 import threading
 
 clingo_program = """
 % We can selected candidate vertices to the torso.
-{ torso(X) : candidate(X) }.
+{ torso(X) : node(X) }.
 
 % Select as many vertices as possible.
 #maximize { @cost, X : torso(X) }.
@@ -26,7 +30,7 @@ component(C,Y) :- component(C,X), not torso(X), edge(Y,X).
 :~ torso(X), torso(Y), edge(X,Y). [1,X,Y]                  % induced edges
 """
 
-def Torso(g, cost = 10, k = 50, timeout = 30):        
+def Torso(g, cost = 15, k = 75, timeout = 5):        
     """
     Initializes a torso for the given graph *g*, which is computed on initialization with cling.
     
@@ -41,13 +45,13 @@ def Torso(g, cost = 10, k = 50, timeout = 30):
     control.configuration.solver.opt_usc_shrink = "min"
     control.configuration.solve.opt_mode        = "opt"
     control.configuration.solve.solve_limit     = "umax,umax"
-
-    # Add the the graph as relational structure, identify candidate vertices for the torso, and provide the logic program.
-    control.add("base", [], _graph2structure(g))
-    control.add("base", [], _candidates(g, k = k))
+    
+    # Add the the pre torso of the graph as relational structure and provide the logic program.
+    control.add("base", [], _graph2structure(_pretorso(g,k)))
     control.add("base", [], clingo_program.replace("@cost", str(cost)))    
-
+    
     # Ground the Program.
+    print("c ├─ Grounding the logic program.")
     control.ground([("base", [])])
 
     # Define hat to do with answer sets.
@@ -56,13 +60,14 @@ def Torso(g, cost = 10, k = 50, timeout = 30):
         torso.clear()
         for a in [atom for atom in model.symbols(shown=True) if atom.name == "torso"]:
             torso.append(a.arguments[0].number)
-        print(f"c Found a new torso of size {len(torso)}.")
+        print(f"c ├─── Found a new torso of size {len(torso)}.")
 
     # Pack everything to a function ...
     def solver(control, model_callback):
         control.solve(on_model = model_callback)
 
     # .. and execute it in a thread with the given timeout.
+    print("c ├─ Computing the real torso with Clingo.")
     t = threading.Thread(target=solver, args=(control, model_callback))
     t.start()
     t.join(timeout)
@@ -72,15 +77,48 @@ def Torso(g, cost = 10, k = 50, timeout = 30):
     # done
     return torso
 
-def _candidates(g, k = 50):
-    candidates = []
+def _pretorso(g, k):
+    """
+    Computes a pre torso in which we search the real torso via ASP.
+    The pre torso is a graph obtained by a subset of vertices of g selected by a heuristic.
+    Components outside of this selection are made into cliques.
+    """   
+    # Select k vertices with small degree to the previously selected nodes and high degree to the others.
+    print("c ├─ Computing nodes of the pre torso.")
+    candidates = set()
+    scores     = [0]
+    queue      = tms.PriorityQueue()
+    for v in g.nodes:
+        while len(scores) < v+1:
+            scores.append(0)
+        scores[v] = g.degree(v)
+        queue.push(v, scores[v])
 
-    # The k nodes of minimum degree.
-    degrees = dict(g.degree())
-    for v in sorted(degrees, key=degrees.get)[:k]:
-        candidates.append(f"candidate({v}).")
-    
-    return "\n".join(candidates)
+    while len(candidates) < k:
+        v = None        
+        while not queue.is_empty():
+            v, score = queue.pop()
+            if score == scores[v]:
+                break # otherwise the this is an outdated element
+        if v is None:
+            break # queue did not contain any remaining elements
+        if v in candidates:
+            continue
+        candidates.add(v)
+        for w in g.neighbors(v):
+            scores[w] -= 2 # We reduce two, to punish edges within the candidates
+            queue.push(w, scores[w])
+        
+    # Computing the torso graph of these vertices.
+    pretorso = nx.Graph(g.subgraph(candidates))
+    t = nx.Graph(g)
+    t.remove_nodes_from(candidates)
+    for c in nx.connected_components(t):
+        for (u,v) in itertools.combinations(tms._neighbors_of_set_in(g, c, candidates), 2):
+                pretorso.add_edge(u, v)            
+
+    print(f"c ├─ Computed a pre torso with {len(pretorso.nodes)} vertices and {len(pretorso.edges)} edges.")
+    return pretorso
 
 def _graph2structure(graph):
     facts = []

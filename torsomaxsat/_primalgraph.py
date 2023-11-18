@@ -182,10 +182,14 @@ class PrimalGraph:
         for c in nx.connected_components(h):
             for (u,v) in itertools.combinations(tms._neighbors_of_set_in(self.g, c, torso_nodes), 2):
                 torso_graph.add_edge(u, v)
-        
+
+        # Logging
+        print(f"c ├─ Computed a torso with {len(torso_graph.nodes)} vertices and {len(torso_graph.edges)} edges.")
+                
         # Compute a tree decomposition of the torso.
         (width, td) = nx.algorithms.approximation.treewidth_min_fill_in(torso_graph)
-        print(f"c Treewidth of the torso: {width}")
+        print(f"c ├─ Treewidth of the torso: {width:6}")
+        print( "c └─────────────────────────────────────")
         
         # Compute the torso decomposition by adding the remaining components.
         torso_td = nx.Graph(td)
@@ -241,12 +245,8 @@ class PrimalGraph:
         pos_labels     = {k: (x, y + label_y_offset) for k, (x, y) in pos.items()}    
         nx.draw_networkx_labels(td, pos_labels, labels=labels, font_family='monospace', font_weight='bold', font_size=10)
         
-        # Compute a tree decomposition for comparison.
-        (tw,_,_) = self.compute_tree_decomposition()
-
         plt.gcf().canvas.manager.set_window_title('Torso Decomposition')
         plt.text(0.025,0.95, format(f"Torsowidth:  {width}"), transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
-        plt.text(0.025,0.92, format(f"Treewidth:   {tw}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
-        plt.text(0.025,0.89, format(f"Nodes/Edges: {len(self.g)}/{len(self.g.edges)}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
+        plt.text(0.025,0.92, format(f"Nodes/Edges: {len(self.g)}/{len(self.g.edges)}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
         plt.show()
 
