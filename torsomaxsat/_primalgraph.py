@@ -196,16 +196,18 @@ class PrimalGraph:
         
         # Compute the torso decomposition by adding the remaining components.
         torso_td = nx.Graph(td)
+        
+        # Root the decomposition.
+        torso_td, root = self._root_td(torso_td)
+
         for c in nx.connected_components(h):
             node      = frozenset(c)
             neighbors = _neighbors_of_set_in(self.g, c, torso_nodes)
             for bag in torso_td.nodes:
                 if neighbors.issubset(bag):
-                    torso_td.add_edge(node,bag)
+                    torso_td.add_edge(bag, node)
+                    torso_td.nodes[node]['sub'] = True
                     break
-
-        # Root the decomposition.
-        torso_td, root = self._root_td(torso_td)
 
         # Original nodes
         torso_nodes = set(td.nodes)
