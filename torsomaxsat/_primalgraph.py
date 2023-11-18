@@ -2,6 +2,8 @@ import itertools
 import networkx          as nx
 import matplotlib.pyplot as plt
 import tempfile, subprocess, os
+
+import torsomaxsat as tms
 from torsomaxsat import Torso
 
 def _separation(g):
@@ -29,15 +31,6 @@ def _separation(g):
 
     # Return the separation
     return (A.nodes - vertex_cover, vertex_cover, B.nodes - vertex_cover)
-
-def _neighbors_of_set_in(g, c, s):
-    """
-    Computes the neighbors of c in set s in g.
-    """
-    neighbors = set()
-    for v in c:
-        neighbors = neighbors.union(g.neighbors(v))
-    return neighbors.intersection(s)
 
 class PrimalGraph:
 
@@ -187,7 +180,7 @@ class PrimalGraph:
         h = nx.Graph(self.g)
         h.remove_nodes_from(torso_nodes)
         for c in nx.connected_components(h):
-            for (u,v) in itertools.combinations(_neighbors_of_set_in(self.g, c, torso_nodes), 2):
+            for (u,v) in itertools.combinations(tms._neighbors_of_set_in(self.g, c, torso_nodes), 2):
                 torso_graph.add_edge(u, v)
         
         # Compute a tree decomposition of the torso.
@@ -198,7 +191,7 @@ class PrimalGraph:
         torso_td = nx.Graph(td)
         for c in nx.connected_components(h):
             node      = frozenset(c)
-            neighbors = _neighbors_of_set_in(self.g, c, torso_nodes)
+            neighbors = tms._neighbors_of_set_in(self.g, c, torso_nodes)
             for bag in torso_td.nodes:
                 if neighbors.issubset(bag):
                     torso_td.add_edge(node,bag)

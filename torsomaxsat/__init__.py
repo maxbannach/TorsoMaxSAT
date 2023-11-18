@@ -1,3 +1,14 @@
+def _neighbors_of_set_in(g, c, s):
+    """
+    Computes the neighbors of c in set s in g.
+    """
+    neighbors = set()
+    for v in s:
+        for w in g.neighbors(v):
+            if w in c:
+                neighbors.add(v)
+    return neighbors
+
 from ._utils           import BiMap
 from ._wcnf            import WCNF
 from ._torso           import Torso
