@@ -167,7 +167,7 @@ class DPSolver(Solver):
     def good(self, ngs, k, mask):
         for ng in ngs:                
             if self.inv_nogood(ng, k, mask):  #nogood invalidated
-                print("INV nogood ", ng, " for ", k)
+                #print("INV nogood ", ng, " for ", k)
                 return False
         return True
 
@@ -176,7 +176,7 @@ class DPSolver(Solver):
         for (n,m,w) in ngs:
             #print("CHECKING SOFT ", n, m, k, chmask, mask)
             if self.inv_nogood((n,m), k, chmask): #if we have clause -> expensive
-                print("INV soft nogood ", (n,w), " for ", k)
+                #print("INV soft nogood ", (n,w), " for ", k)
         # m & chmask == m and m & mask != m and k & n & m == n & m: 
         # nogood visible in child, not anymore and unmatched --> cost + 1
                 fitness = fitness + w  
@@ -251,14 +251,15 @@ class DPSolver(Solver):
 
                                 s.add_clause(clause)
                                 for k in nn:
-                                    w = None
-                                    try:
-                                        w=self.wcnf.soft[k]
-                                    except KeyError:
-                                        pass
-                                    if w is not None:
-                                        s.add_clause([k], weight=float(w))
-                                        del self.wcnf.soft[k]   # never do soft constraints twice!
+                                    if k not in n:
+                                        w = None
+                                        try:
+                                            w=self.wcnf.soft[k]
+                                        except KeyError:
+                                            pass
+                                        if w is not None:
+                                            s.add_clause([k], weight=float(w))
+                                            del self.wcnf.soft[k]   # never do soft constraints twice!
                                 #print(" DEL ", pos)
                                 delc.append(pos)
                                 break
@@ -431,6 +432,7 @@ class DPSolver(Solver):
                             else:
                                 print("SOLVED SUBINSTANCE ", subs.fitness)
                                 ow = ow + subs.fitness
+                        print("SUBINSTANCES ", ow, " to be added to ", o)
                         if ow is not None:
                             m[kk] = o + ow
         return m
