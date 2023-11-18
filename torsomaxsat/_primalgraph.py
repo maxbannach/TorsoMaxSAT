@@ -180,7 +180,7 @@ class PrimalGraph:
         print("c Computing a torso-decomposition.")
         
         # First compute the torso.
-        torso_nodes = Torso(self.g, timeout = timeout, k = 10)
+        torso_nodes = Torso(self.g, timeout = timeout)
         torso_graph = nx.Graph(self.g.subgraph(torso_nodes))
         
         # Complete the boarders of the torso into cliques.        
