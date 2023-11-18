@@ -102,7 +102,7 @@ class WCNF:
             return
 
         # If the weight is an integer, cast it as such.
-        if weight and weight.is_integer():
+        if weight and isinstance(weight, float) and weight.is_integer():
             weight = int(weight)
 
         # Add the variables of the clause to the formula and cast it to the internal representation.
