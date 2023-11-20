@@ -189,7 +189,8 @@ class DPSolver(Solver):
 
     def prepare_dp(self):
         tables = {}
-       
+      
+        softs = copy.copy(self.wcnf.soft)
        
         #ngs = []
         #for (clause,w) in self.wcnf.soft.items():
@@ -220,7 +221,7 @@ class DPSolver(Solver):
             for k in n:
                 if k not in p:
                     try:
-                        w = self.wcnf.soft[k]
+                        w = softs[k]
                         nn,m = self.conv2nogood([-k])
                         soft.append((nn,m,w,))
                         delc.append(k)
@@ -229,7 +230,7 @@ class DPSolver(Solver):
 
             for d in delc:  # never, ever do this soft constraint again! (in particular: not for any subinstance!)
                 print(" DEL ", d)
-                del self.wcnf.soft[d]
+                del softs[d]
 
             hard = []
             
@@ -259,15 +260,15 @@ class DPSolver(Solver):
                                     if k not in n:
                                         w = None
                                         try:
-                                            w=self.wcnf.soft[k]
+                                            w=softs[k]
                                         except KeyError:
                                             pass
                                         if w is not None:
                                             s.add_clause([k], weight=float(w))
-                                            del self.wcnf.soft[k]   # never do soft constraints twice!
+                                            del softs[k]   # never do soft constraints twice!
                                 #print(" DEL ", pos)
                                 delc.append(pos)
-                                break
+                                break   # a clause is only once in-scope!
                 pos = pos + 1
           
             #print(delhard, len(self.wcnf.hard))
@@ -408,6 +409,17 @@ class DPSolver(Solver):
 
         print("INTR POS ", pos)
 
+        # find sub bag-vars after projection
+        sub_vars = {}
+        for (ns,s) in sub.items():
+            submask = 0
+            for b in bag:
+                if b in s.varmap.value_to_key:
+                    submask = submask | (1 << self.varmap[b])
+            sub_vars[ns] = submask
+
+        sub_cache = {}
+
         #FIXME: avoid copying in some cases?
         m = m1
         if len(pos) > 0 or len(hard) > 0 or len(sub) > 0:
@@ -420,28 +432,51 @@ class DPSolver(Solver):
 
                     #print(kk)
                     if self.good(hard, kk, mask):   #no nogood invalidated
-                        ass = self.ass2lits(bag, kk)
                         ow = 0
                         for (ns,s) in sub.items():
-                            wcnf = copy.deepcopy(s)
-                            for l in ass:
-                                wcnf.add_clause([l])
-                            print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass, kk)
-                            #subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
-                            subs = _scip.ScipSolver(wcnf, preprocessor = self.preprocessor)
-                            subs.solve()
-                            wcnf = None
-                            if subs.state != State.OPTIMAL:
-                                print("UNSAT")
-                                ow = None
-                                break
-                            else:
-                                print("SOLVED SUBINSTANCE ", subs.fitness, " FOR ", ns, " ON ", ass, kk)
-                                #print("SOLVED SUBINSTANCE ", subs.fitness)
-                                ow = ow + subs.fitness
+                            cache = None
+                            try:
+                                cache = sub_cache[ns]
+                            except KeyError:
+                                cache = {}
+                                sub_cache[ns] = cache
+
+                            submask = sub_vars[ns]
+                            wcnf = s
+                            kk_sub = kk & submask
+                            ass = self.ass2lits(bag, kk_sub)
+                            sub_res = None
+                            try:
+                                sub_res = sub_cache[ns][kk_sub]
+                                print("CACHE HIT ", kk_sub, kk)
+                            except KeyError:
+                                pass
+                            if sub_res is not None: #cache hit
+                                ow = ow + sub_res
+                            else:  # not computed so far
+                                if len(ass) > 0: # something to assign?
+                                    wcnf = copy.deepcopy(s)
+                                    for l in ass:
+                                        if abs(l) in wcnf.varmap.value_to_key:  # only assign req. elements
+                                            wcnf.add_clause([l])
+                                print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass, kk_sub)
+                                #subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
+                                subs = _scip.ScipSolver(wcnf, preprocessor = self.preprocessor)
+                                subs.solve()
+                                wcnf = None
+                                if subs.state != State.OPTIMAL:
+                                    print("UNSAT")
+                                    subs.fitness = None
+                                    ow = None
+                                    break
+                                else:
+                                    print("SOLVED SUBINSTANCE ", subs.fitness, " FOR ", ns, " ON ", ass, kk_sub)
+                                    #print("SOLVED SUBINSTANCE ", subs.fitness)
+                                    ow = ow + subs.fitness
+                                cache[kk_sub] = subs.fitness
                         if ow is not None:
                             if ow > 0:
-                                print("SUBINSTANCES ", ow, " to be added to ", o, " FOR ", kk)
+                                print("SUBINSTANCES ", ow, " to be added to ", o, " FOR ", kk, kk_sub)
                             m[kk] = o + ow
         return m
 
