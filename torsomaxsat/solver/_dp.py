@@ -4,6 +4,7 @@ from torsomaxsat import PrimalGraph
 from torsomaxsat import _utils
 from torsomaxsat import _wcnf
 from torsomaxsat.solver import _gurobi
+from torsomaxsat.solver import _scip
 import networkx as nx
 import functools
 import copy
@@ -283,7 +284,7 @@ class DPSolver(Solver):
         # dp
         for n in nx.dfs_postorder_nodes(self.td, self.root):
             if self.nodes is not None and n not in self.nodes:
-                print("skip ", n)
+                #print("skip ", n)
                 continue
             chmasks = 0
             #cs = []
@@ -422,7 +423,8 @@ class DPSolver(Solver):
                             for l in ass:
                                 wcnf.add_clause([l])
                             print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass)
-                            subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
+                            #subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
+                            subs = _scip.ScipSolver(wcnf, preprocessor = self.preprocessor)
                             subs.solve()
                             wcnf = None
                             if subs.state != State.OPTIMAL:
@@ -432,8 +434,9 @@ class DPSolver(Solver):
                             else:
                                 print("SOLVED SUBINSTANCE ", subs.fitness)
                                 ow = ow + subs.fitness
-                        print("SUBINSTANCES ", ow, " to be added to ", o)
                         if ow is not None:
+                            if ow > 0:
+                                print("SUBINSTANCES ", ow, " to be added to ", o)
                             m[kk] = o + ow
         return m
 
