@@ -57,7 +57,7 @@ class DPSolver(Solver):
         if len(t) > 0:
             it = tuple(t.items())[0]
             #self.fitness = functools.reduce(lambda a,w: a+w, self.costmap.values()) -it[1]
-            self.fitness = it[1] #sum(self.wcnf.soft.values()) -it[1]
+            self.fitness = float(it[1]) #sum(self.wcnf.soft.values()) -it[1]
             #self.fitness = -it[1]
 
             #FIXME: enable tracking of assignment parts and output assignment
@@ -149,12 +149,16 @@ class DPSolver(Solver):
             mask = mask >> 1
         return pos
 
-    #def ass2lits(self, ass):
-    #    lits = []
-    #    for i in range(0, self.poses):
-    #        lits.append(self.varmap_rev[i] * (1 if ass & 1 else -1))
-    #        ass = ass >> 1
-    #    return lits
+    def ass2lits(self, bag, ass):
+        pos = self.mask2pos(ass)    #get positive list
+        lits = [] #pos and neg
+
+        for i in bag:
+            if ass & (1 << self.varmap[i]) > 0: # true / pos
+                lits.append(i)
+            else:   # false / neg
+                lits.append(-i)
+        return lits
 
     def inv_nogood(self, nogood, k, mask):
         n,m = nogood
@@ -345,7 +349,7 @@ class DPSolver(Solver):
            
             # intr
             print("intro ", mask, " chmasks ", chmasks)
-            m = self.intro(hard, m, mask, chmasks, sub)
+            m = self.intro(n, hard, m, mask, chmasks, sub)
             tables[n] = (m,mask,hard,nsoft,sub)
             print("SETTING ", m, " for ", n)
         return tables[self.root][0]   #root table
@@ -395,7 +399,7 @@ class DPSolver(Solver):
 
 
     #fresh items at poses
-    def intro(self, hard, m1, mask, chmasks, sub):
+    def intro(self, bag, hard, m1, mask, chmasks, sub):
         #pos = set(bag).difference(ch_bag)
         #print(pos)
         pos = self.mask2pos(mask & ~chmasks)    #intro poses
@@ -416,13 +420,13 @@ class DPSolver(Solver):
 
                     #print(kk)
                     if self.good(hard, kk, mask):   #no nogood invalidated
-                        ass = self.mask2pos(kk)
+                        ass = self.ass2lits(bag, kk)
                         ow = 0
                         for (ns,s) in sub.items():
                             wcnf = copy.deepcopy(s)
                             for l in ass:
                                 wcnf.add_clause([l])
-                            print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass)
+                            print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass, kk)
                             #subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
                             subs = _scip.ScipSolver(wcnf, preprocessor = self.preprocessor)
                             subs.solve()
@@ -432,11 +436,12 @@ class DPSolver(Solver):
                                 ow = None
                                 break
                             else:
-                                print("SOLVED SUBINSTANCE ", subs.fitness)
+                                print("SOLVED SUBINSTANCE ", subs.fitness, " FOR ", ns, " ON ", ass, kk)
+                                #print("SOLVED SUBINSTANCE ", subs.fitness)
                                 ow = ow + subs.fitness
                         if ow is not None:
                             if ow > 0:
-                                print("SUBINSTANCES ", ow, " to be added to ", o)
+                                print("SUBINSTANCES ", ow, " to be added to ", o, " FOR ", kk)
                             m[kk] = o + ow
         return m
 
@@ -459,7 +464,7 @@ class DPSolver(Solver):
         #print(" SOFT vs ", soft, ngs)
 
 #        soft = ngs
-        #print("soft nogoods ", mask, chmask, soft)
+        print("soft nogoods ", mask, chmask, soft)
         m = {}
         #print(m1)
         for (k,o) in m1.items():
