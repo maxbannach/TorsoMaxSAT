@@ -6,6 +6,7 @@ from torsomaxsat import State
 from torsomaxsat import GurobiSolver
 from torsomaxsat import ScipSolver
 from torsomaxsat import RC2Solver
+from torsomaxsat import HSSolver
 from torsomaxsat import FMSolver
 from torsomaxsat import ORSolver
 from torsomaxsat import DPSolver
@@ -20,7 +21,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='A MaxSAT solver based on Tree Decompositions of the Torso Graph.')
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
     parser.add_argument("-s", "--solver", help="Base solvere used. \
-    Implemented solvers are [gurobi, scip, rc2, fm, ortools, dp]. An external <cmd> can also be provided.", default="rc2")
+    Implemented solvers are [gurobi, scip, rc2, hs, fm, ortools, dp]. An external <cmd> can also be provided.", default="rc2")
     parser.add_argument("-t", "--twsolver", help="Command to execute an external treewidth solver (PACE compatible).")
     parser.add_argument("-f", "--file", type=argparse.FileType("r"), default=sys.stdin, help="Input formula (as DIMACS2022 wcnf). Default is stdin.")
     parser.add_argument('-p', '--primal',  action='store_true', help='Just output the primal graph of the instance.')
@@ -89,6 +90,8 @@ if __name__ == "__main__":
         solver = ScipSolver(phi,   preprocessor = args.maxpre)
     elif args.solver == "rc2":
         solver = RC2Solver(phi,    preprocessor = args.maxpre)
+    elif args.solver == "hs":
+        solver = HSSolver(phi,     preprocessor = args.maxpre)
     elif args.solver == "fm":
         solver = FMSolver(phi,     preprocessor = args.maxpre)
     elif args.solver == "ortools":

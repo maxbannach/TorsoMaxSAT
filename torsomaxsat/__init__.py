@@ -44,6 +44,7 @@ from .solver           import Solver, State
 from .solver._gurobi   import GurobiSolver
 from .solver._scip     import ScipSolver
 from .solver._rc2      import RC2Solver
+from .solver._hs       import HSSolver
 from .solver._fm       import FMSolver
 from .solver._ortools  import ORSolver
 from .solver._dp       import DPSolver

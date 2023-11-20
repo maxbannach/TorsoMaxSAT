@@ -13,7 +13,7 @@ solvers via:
 xz -cd examples/<file> | python main.py -s <solver>
 ```
 
-Where `<solver>` is one of `gurobi`, `scip`, `rc2`, `fm`, `ortools`,
+Where `<solver>` is one of `gurobi`, `scip`, `rc2`, `hs`, `fm`, `ortools`,
 or `dp`. Alternatively, `<solver>` can also be a command used to
 execute an external solver.
 
