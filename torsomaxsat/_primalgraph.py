@@ -201,8 +201,8 @@ class PrimalGraph:
         torso_td, root = self._root_td(torso_td)
 
         for c in nx.connected_components(h):
-            node      = frozenset(c)
             neighbors = _neighbors_of_set_in(self.g, c, torso_nodes)
+            node      = frozenset(c.union(neighbors))
             for bag in torso_td.nodes:
                 if neighbors.issubset(bag):
                     torso_td.add_edge(bag, node)

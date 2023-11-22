@@ -414,7 +414,7 @@ class DPSolver(Solver):
         for (ns,s) in sub.items():
             submask = 0
             for b in bag:
-                if b in s.varmap.value_to_key:
+                if b in s.varmap.key_to_value:
                     submask = submask | (1 << self.varmap[b])
             sub_vars[ns] = submask
 
@@ -448,16 +448,18 @@ class DPSolver(Solver):
                             sub_res = None
                             try:
                                 sub_res = sub_cache[ns][kk_sub]
+                                if sub_res is None:
+                                    ow = None
                                 print("CACHE HIT ", kk_sub, kk)
                             except KeyError:
                                 pass
                             if sub_res is not None: #cache hit
                                 ow = ow + sub_res
-                            else:  # not computed so far
+                            elif ow is not None:  # not computed so far
                                 if len(ass) > 0: # something to assign?
                                     wcnf = copy.deepcopy(s)
                                     for l in ass:
-                                        if abs(l) in wcnf.varmap.value_to_key:  # only assign req. elements
+                                        if abs(l) in wcnf.varmap.key_to_value:  # only assign req. elements
                                             wcnf.add_clause([l])
                                 print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass, kk_sub)
                                 #subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
