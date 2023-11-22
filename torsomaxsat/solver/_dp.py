@@ -205,7 +205,7 @@ class DPSolver(Solver):
             # skip subproblem nodes
             if self.nodes is not None and n not in self.nodes:
                 continue
-            print("PREPARE ", n, self.nodes, self.root)
+            print("c PREPARE ", n, self.nodes, self.root)
             p = frozenset()
             u = 0
             if n != self.root:
@@ -229,7 +229,7 @@ class DPSolver(Solver):
                         pass
 
             for d in delc:  # never, ever do this soft constraint again! (in particular: not for any subinstance!)
-                print(" DEL ", d)
+                #print(" DEL ", d)
                 del softs[d]
 
             hard = []
@@ -304,11 +304,11 @@ class DPSolver(Solver):
             
             _,mask,hard,nsoft,sub = tables[n] #self.makeMask(n, update=0)   #update max poses
             self.maxpos(n)
-            print("NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, nsoft, " sub ", sub)
+            print("c NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, nsoft) #, " sub ", sub)
             m = None
             if 'leaf' in self.td.nodes[n]: #n.isLeaf():
                 m = {0:0}   #empty assignment 0 : costs 0
-                print('leaf')
+                #print('leaf')
             else:
                 prevch = 0
                 mn,chmask,_,soft = (None, None, None, None)
@@ -320,7 +320,7 @@ class DPSolver(Solver):
                     except KeyError:
                         #subbags.append(c)
                         continue
-                    print("previous: ", c, tables[c][0])
+                    #print("previous: ", c, tables[c][0])
                     #chmask = tables[c][1] #self.td.bag(c))
                     
                     # grab table and soft (soft is 1 level behind)
@@ -329,15 +329,15 @@ class DPSolver(Solver):
                     #mn = self.forget(list(self.td.predecessors(n))[0], mn, mask, chmask)
                     #mn = self.forget(c,n,soft, mn, mask, chmask)
                     mn = self.forget(soft, mn, mask, chmask)
-                    print("project ", mn, " mask ", mask, " chmask ", chmask)
+                    #print("project ", mn, " mask ", mask, " chmask ", chmask)
                     # join
                     if m is None:
                         m = mn
                         prevch = chmask
                     else:
-                        print("joining ", mn, " with ", m)
+                        #print("joining ", mn, " with ", m)
                         m = self.join(mask, mn, chmask, m, prevch)
-                        print("join ", m)
+                        #print("join ", m)
                         prevch = (chmask & mask) | (prevch & mask)    # could be union over both
 
                     # free table
@@ -349,10 +349,10 @@ class DPSolver(Solver):
                     #    del self.varmap_rev[i]
            
             # intr
-            print("intro ", mask, " chmasks ", chmasks)
+            #print("intro ", mask, " chmasks ", chmasks)
             m = self.intro(n, hard, m, mask, chmasks, sub)
             tables[n] = (m,mask,hard,nsoft,sub)
-            print("SETTING ", m, " for ", n)
+            print("c SETTING ", m, " for ", n)
         return tables[self.root][0]   #root table
 
 
@@ -407,7 +407,7 @@ class DPSolver(Solver):
         #if len(pos) == 0:
         #    return m1
 
-        print("INTR POS ", pos)
+        #print("INTR POS ", pos)
 
         # find sub bag-vars after projection
         sub_vars = {}
@@ -450,7 +450,7 @@ class DPSolver(Solver):
                                 sub_res = sub_cache[ns][kk_sub]
                                 if sub_res is None:
                                     ow = None
-                                print("CACHE HIT ", kk_sub, kk)
+                                #print("CACHE HIT ", kk_sub, kk)
                             except KeyError:
                                 pass
                             if sub_res is not None: #cache hit
@@ -461,24 +461,24 @@ class DPSolver(Solver):
                                     for l in ass:
                                         if abs(l) in wcnf.varmap.key_to_value:  # only assign req. elements
                                             wcnf.add_clause([l])
-                                print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass, kk_sub)
+                                #print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass, kk_sub)
                                 #subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
                                 subs = _scip.ScipSolver(wcnf, preprocessor = self.preprocessor)
                                 subs.solve()
                                 wcnf = None
                                 if subs.state != State.OPTIMAL:
-                                    print("UNSAT")
+                                    #print("UNSAT")
                                     subs.fitness = None
                                     ow = None
                                     break
                                 else:
-                                    print("SOLVED SUBINSTANCE ", subs.fitness, " FOR ", ns, " ON ", ass, kk_sub)
+                                    #print("SOLVED SUBINSTANCE ", subs.fitness, " FOR ", ns, " ON ", ass, kk_sub)
                                     #print("SOLVED SUBINSTANCE ", subs.fitness)
                                     ow = ow + subs.fitness
                                 cache[kk_sub] = subs.fitness
                         if ow is not None:
-                            if ow > 0:
-                                print("SUBINSTANCES ", ow, " to be added to ", o, " FOR ", kk, kk_sub)
+                            #if ow > 0:
+                                #print("SUBINSTANCES ", ow, " to be added to ", o, " FOR ", kk, kk_sub)
                             m[kk] = o + ow
         return m
 
@@ -501,7 +501,7 @@ class DPSolver(Solver):
         #print(" SOFT vs ", soft, ngs)
 
 #        soft = ngs
-        print("soft nogoods ", mask, chmask, soft)
+        #print("soft nogoods ", mask, chmask, soft)
         m = {}
         #print(m1)
         for (k,o) in m1.items():
