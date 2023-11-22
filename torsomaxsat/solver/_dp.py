@@ -21,8 +21,8 @@ class DPSolver(Solver):
         self.varmap  = {}
         #self.varmap_rev  = {}
         self.poses = 0
-        print(wcnf.hard)
-        print(wcnf.soft)
+        #print(wcnf.hard)
+        #print(wcnf.soft)
         # make bitmaps
         #for c in self.wcnf.hard:
         #    print("hard ", c)
