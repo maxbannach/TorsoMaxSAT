@@ -150,7 +150,7 @@ class DPSolver(Solver):
         return pos
 
     def ass2lits(self, bag, ass):
-        pos = self.mask2pos(ass)    #get positive list
+        #pos = self.mask2pos(ass)    #get positive list
         lits = [] #pos and neg
 
         for i in bag:
@@ -349,7 +349,7 @@ class DPSolver(Solver):
                     #    del self.varmap_rev[i]
            
             # intr
-            #print("intro ", mask, " chmasks ", chmasks)
+            print("c INTRO+SUB ", mask, " chmasks ", chmasks)
             m = self.intro(n, hard, m, mask, chmasks, sub)
             tables[n] = (m,mask,hard,nsoft,sub)
             print("c SETTING ", m, " for ", n)
@@ -414,7 +414,7 @@ class DPSolver(Solver):
         for (ns,s) in sub.items():
             submask = 0
             for b in bag:
-                if b in s.varmap.key_to_value:
+                if b in s.varmap.key_to_value: #value_to_key:
                     submask = submask | (1 << self.varmap[b])
             sub_vars[ns] = submask
 
@@ -447,15 +447,16 @@ class DPSolver(Solver):
                             ass = self.ass2lits(bag, kk_sub)
                             sub_res = None
                             try:
-                                sub_res = sub_cache[ns][kk_sub]
-                                if sub_res is None:
-                                    ow = None
+                                sub_res = cache[kk_sub]
                                 #print("CACHE HIT ", kk_sub, kk)
+                                if sub_res is None:
+                                    ow = None # no need to further call sth -> UNSAT
+                                    break
                             except KeyError:
                                 pass
                             if sub_res is not None: #cache hit
                                 ow = ow + sub_res
-                            elif ow is not None:  # not computed so far
+                            else:  # not computed so far
                                 if len(ass) > 0: # something to assign?
                                     wcnf = copy.deepcopy(s)
                                     for l in ass:
