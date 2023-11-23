@@ -61,6 +61,8 @@ class DPSolver(Solver):
             #self.fitness = -it[1]
 
             #FIXME: enable tracking of assignment parts and output assignment
+            self.assignment = [0] * max(self.wcnf.varmap.value_to_key)
+            #self.assignment = [i for i in self.wcnf.varmap.value_to_key] #self.ass2lits(it[0])
             #self.assignment = self.ass2lits(it[0])
             #print(self.assignment)
             self.state = State.OPTIMAL
@@ -304,7 +306,7 @@ class DPSolver(Solver):
             
             _,mask,hard,nsoft,sub = tables[n] #self.makeMask(n, update=0)   #update max poses
             self.maxpos(n)
-            print("c NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, nsoft) #, " sub ", sub)
+            print("c NODE ", n, " MASK ", mask, " poses ", self.poses, " varmap ", self.varmap, hard, nsoft, "# sub maxsats: ", len(sub)) #, " sub ", sub)
             m = None
             if 'leaf' in self.td.nodes[n]: #n.isLeaf():
                 m = {0:0}   #empty assignment 0 : costs 0
