@@ -1,22 +1,22 @@
-from torsomaxsat import Solver
+from torsomaxsat import Solver, solver_from_string
 from torsomaxsat import State
 from torsomaxsat import PrimalGraph
 from torsomaxsat import _utils
 from torsomaxsat import _wcnf
-from torsomaxsat.solver import _gurobi
-from torsomaxsat.solver import _scip
+
 import networkx as nx
 import functools
 import copy
 
 class DPSolver(Solver):
 
-    def __init__(self, wcnf, preprocessor):
+    def __init__(self, wcnf, preprocessor, subsolver = "rc2"):
         super().__init__(wcnf, preprocessor)
         #self.nogoods = []
         #self.softngs = []
         #self.costmap = {}
 
+        self.subsolver = subsolver
         self.nodes = None
         self.varmap  = {}
         #self.varmap_rev  = {}
@@ -465,8 +465,7 @@ class DPSolver(Solver):
                                         if abs(l) in wcnf.varmap.key_to_value:  # only assign req. elements
                                             wcnf.add_clause([l])
                                 #print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass, kk_sub)
-                                #subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
-                                subs = _scip.ScipSolver(wcnf, preprocessor = self.preprocessor)
+                                subs = solver_from_string(self.subsolver, wcnf, preprocessor = self.preprocessor, twsolver = self.twsolver, subsolver = self.subsolver)
                                 subs.preprocess_and_solve()
                                 wcnf = None
                                 if subs.state != State.OPTIMAL:

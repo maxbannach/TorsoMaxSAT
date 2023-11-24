@@ -1,5 +1,25 @@
 import heapq
 
+def solver_from_string(cmd, wcnf, preprocessor = None, twsolver = None, subsolver = None):
+    if cmd is None or cmd == "rc2":
+        solver = RC2Solver(wcnf,    preprocessor = preprocessor)        
+    elif cmd == "gurobi":
+        solver = GurobiSolver(wcnf, preprocessor = preprocessor)
+    elif cmd == "scip":
+        solver = ScipSolver(wcnf,   preprocessor = preprocessor)
+    elif cmd == "hs":
+        solver = HSSolver(wcnf,     preprocessor = preprocessor)
+    elif cmd == "fm":
+        solver = FMSolver(wcnf,     preprocessor = preprocessor)
+    elif cmd == "ortools":
+        solver = ORSolver(wcnf,     preprocessor = preprocessor)
+    elif cmd == "dp":
+        solver = DPSolver(wcnf,     preprocessor = preprocessor, subsolver = subsolver)
+        solver.twsolver = twsolver
+    else:
+        solver = ExternalSolver(wcnf, cmd, preprocessor = preprocessor)
+    return solver
+
 def _neighbors_of_set_in(g, c, s):
     """
     Computes the neighbors of c in set s in g.

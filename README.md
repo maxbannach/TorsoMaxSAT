@@ -17,6 +17,13 @@ Where `<solver>` is one of `gurobi`, `scip`, `rc2`, `hs`, `fm`, `ortools`,
 or `dp`. Alternatively, `<solver>` can also be a command used to
 execute an external solver.
 
+## Using Subsolvers
+
+If TorsoMaxSAT is used with option `-s dp` the instance is solved with a dynamic program on the formulas torso, whereby subinstances are solved with another solver (called subsolver). This subsolver can be specifed via `--subsolver <solver>` with the same options as for `-s`. For instance:
+
+```
+xz -dc examples/<file>  | python main.py -s dp --subsolver rc2 
+```
 
 ## Use an External Treewidth Solver
 TorsoMaxSAT computes tree decompositions by default with [NetworkX](https://networkx.org).

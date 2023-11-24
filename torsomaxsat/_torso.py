@@ -30,7 +30,7 @@ component(C,Y) :- component(C,X), not torso(X), edge(Y,X).
 :~ torso(X), torso(Y), edge(X,Y). [1,X,Y]                  % induced edges
 """
 
-def Torso(g, cost = 15, k = 75, timeout = 5):        
+def Torso(g, cost = 8, k = 60, timeout = 60):        
     """
     Initializes a torso for the given graph *g*, which is computed on initialization with cling.
     

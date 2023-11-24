@@ -2,15 +2,7 @@ import sys, argparse, time
 
 from torsomaxsat import WCNF
 from torsomaxsat import PrimalGraph
-from torsomaxsat import State
-from torsomaxsat import GurobiSolver
-from torsomaxsat import ScipSolver
-from torsomaxsat import RC2Solver
-from torsomaxsat import HSSolver
-from torsomaxsat import FMSolver
-from torsomaxsat import ORSolver
-from torsomaxsat import DPSolver
-from torsomaxsat import ExternalSolver
+from torsomaxsat import State, solver_from_string
 
 __version__ = "0.0.1"
 __author__  = "Max Bannach and Markus Hecher"
@@ -28,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--display', action='store_true', help='Just produces a visual display of the instance.')    
     parser.add_argument('-tw', action='store_true', help='Estimate the treewidth of the formula and quit.')
     parser.add_argument('-to', action='store_true', help='Computes and visualizes information about the torso of the formula and quit.')
+    parser.add_argument("--subsolver", help="Subsolver used if the main solver is dp. Same options as for -s.")
     parser.add_argument("--maxpre", help="Path to the maxpre2 preprocessor.")
 
     parser.add_argument("-x", "--xover", choices=["a", "b", "c", "external"], help="The xover used.", default="a")
@@ -84,24 +77,11 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # Initialize the selected solver.
-    if args.solver == "gurobi":
-        solver = GurobiSolver(phi, preprocessor = args.maxpre)
-    elif args.solver == "scip":
-        solver = ScipSolver(phi,   preprocessor = args.maxpre)
-    elif args.solver == "rc2":
-        solver = RC2Solver(phi,    preprocessor = args.maxpre)
-    elif args.solver == "hs":
-        solver = HSSolver(phi,     preprocessor = args.maxpre)
-    elif args.solver == "fm":
-        solver = FMSolver(phi,     preprocessor = args.maxpre)
-    elif args.solver == "ortools":
-        solver = ORSolver(phi,     preprocessor = args.maxpre)
-    elif args.solver == "dp":
-        solver = DPSolver(phi,     preprocessor = args.maxpre)
-        solver.twsolver = args.twsolver
-    elif args.solver is not None:
-        solver = ExternalSolver(phi, args.solver, preprocessor = args.maxpre)
-
+    cmd = args.solver
+    if cmd is None:
+        cmd = "rc2"
+    solver = solver_from_string(args.solver, phi, preprocessor = args.maxpre, subsolver = args.subsolver)
+        
     # Solve the instance.
     tstart = time.time()
     solver.preprocess_and_solve()

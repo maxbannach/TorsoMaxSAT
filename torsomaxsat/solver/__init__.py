@@ -18,11 +18,6 @@ class Solver():
             return        
         # Otherwise we preprocess, solve, and reconstruct.
         self._maxpre_preprocess()
-        print(f"c After preprocessing:")
-        print(f"c Variables:    {self.wcnf.n}")
-        print(f"c Hard Clauses: {len(self.wcnf.hard)}")
-        print(f"c Soft Clauses: {len(self.wcnf.soft)}")
-        print("c")
         self.solve()
         if self.state == State.OPTIMAL:
             self._maxpre_reconstruct()
