@@ -41,6 +41,10 @@ class TestSolver(unittest.TestCase):
         for (file, goal) in simple:
             self.assertEqual(run(file, "-s fm"), goal)
 
+    def test_hs(self):
+        for (file, goal) in chain(simple, medium):
+            self.assertEqual(run(file, "-s hs"), goal)
+            
     def test_ortools(self):
         for (file, goal) in chain(simple, medium, hard):
             self.assertEqual(run(file, "-s ortools"), goal)

@@ -2,6 +2,8 @@ import itertools
 import networkx          as nx
 import matplotlib.pyplot as plt
 import tempfile, subprocess, os
+
+import torsomaxsat as tms
 from torsomaxsat import Torso
 
 def _separation(g):
@@ -29,15 +31,6 @@ def _separation(g):
 
     # Return the separation
     return (A.nodes - vertex_cover, vertex_cover, B.nodes - vertex_cover)
-
-def _neighbors_of_set_in(g, c, s):
-    """
-    Computes the neighbors of c in set s in g.
-    """
-    neighbors = set()
-    for v in c:
-        neighbors = neighbors.union(g.neighbors(v))
-    return neighbors.intersection(s)
 
 class PrimalGraph:
 
@@ -180,19 +173,23 @@ class PrimalGraph:
         print("c Computing a torso-decomposition.")
         
         # First compute the torso.
-        torso_nodes = Torso(self.g, timeout = timeout, k = 10)
+        torso_nodes = Torso(self.g, timeout = timeout)
         torso_graph = nx.Graph(self.g.subgraph(torso_nodes))
         
         # Complete the boarders of the torso into cliques.        
         h = nx.Graph(self.g)
         h.remove_nodes_from(torso_nodes)
         for c in nx.connected_components(h):
-            for (u,v) in itertools.combinations(_neighbors_of_set_in(self.g, c, torso_nodes), 2):
+            for (u,v) in itertools.combinations(tms._neighbors_of_set_in(self.g, c, torso_nodes), 2):
                 torso_graph.add_edge(u, v)
-        
+
+        # Logging
+        print(f"c ├─ Computed a torso with {len(torso_graph.nodes)} vertices and {len(torso_graph.edges)} edges.")
+                
         # Compute a tree decomposition of the torso.
         (width, td) = nx.algorithms.approximation.treewidth_min_fill_in(torso_graph)
-        print(f"c Treewidth of the torso: {width}")
+        print(f"c ├─ Treewidth of the torso: {width:6}")
+        print( "c └─────────────────────────────────────")
         
         # Compute the torso decomposition by adding the remaining components.
         torso_td = nx.Graph(td)
@@ -201,7 +198,7 @@ class PrimalGraph:
         torso_td, root = self._root_td(torso_td)
 
         for c in nx.connected_components(h):
-            neighbors = _neighbors_of_set_in(self.g, c, torso_nodes)
+            neighbors = tms._neighbors_of_set_in(self.g, c, torso_nodes)
             node      = frozenset(c.union(neighbors))
             for bag in torso_td.nodes:
                 if neighbors.issubset(bag):
@@ -254,12 +251,8 @@ class PrimalGraph:
         pos_labels     = {k: (x, y + label_y_offset) for k, (x, y) in pos.items()}    
         nx.draw_networkx_labels(td, pos_labels, labels=labels, font_family='monospace', font_weight='bold', font_size=10)
         
-        # Compute a tree decomposition for comparison.
-        (tw,_,_) = self.compute_tree_decomposition()
-
         plt.gcf().canvas.manager.set_window_title('Torso Decomposition')
         plt.text(0.025,0.95, format(f"Torsowidth:  {width}"), transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
-        plt.text(0.025,0.92, format(f"Treewidth:   {tw}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
-        plt.text(0.025,0.89, format(f"Nodes/Edges: {len(self.g)}/{len(self.g.edges)}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
+        plt.text(0.025,0.92, format(f"Nodes/Edges: {len(self.g)}/{len(self.g.edges)}"),    transform=plt.gca().transAxes, fontsize=10, fontfamily='monospace')
         plt.show()
 
