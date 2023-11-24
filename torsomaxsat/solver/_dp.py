@@ -467,7 +467,7 @@ class DPSolver(Solver):
                                 #print("SOLVING SUBINSTANCE ", wcnf.varmap, wcnf.hard, " SOFT PART ", wcnf.soft, " FOR ", ns, " ON ", ass, kk_sub)
                                 #subs = _gurobi.GurobiSolver(wcnf, preprocessor = self.preprocessor)
                                 subs = _scip.ScipSolver(wcnf, preprocessor = self.preprocessor)
-                                subs.solve()
+                                subs.preprocess_and_solve()
                                 wcnf = None
                                 if subs.state != State.OPTIMAL:
                                     #print("UNSAT")
