@@ -23,16 +23,6 @@ class WCNF:
         self.offset   = 0
         self.varmap   = BiMap()        
 
-    
-#    def __init__(self, wcnf):
-#        self.n        = wcnf.n
-#        self.hard     = wcnf.hard
-#        self.soft     = wcnf.soft 
-#        self.negative = wcnf.negative
-#        self.offset   = wcnf.offset
-#        self.varmap   = wcnf.varmap   
-#
-
     def _sign(self, l):
         """
         Returns the sign of a literal as 1 or -1.
