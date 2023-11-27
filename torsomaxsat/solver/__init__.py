@@ -13,8 +13,8 @@ class Solver():
 
     def preprocess_and_solve(self):
          # If there is no preprocessor, we just solve the problem.
-        if self.preprocessor is None:           
-            self.solve()
+        if self.preprocessor is None:                       
+            self.solve()            
             return        
         # Otherwise we preprocess, solve, and reconstruct.
         self._maxpre_preprocess()
@@ -32,15 +32,15 @@ class Solver():
             wcnf_file.flush()
             try:
                 # Run maxpre and store the map file to the second temporary file.
-                result = subprocess.run(self.preprocessor + " " + wcnf_file.name + " preprocess -techniques=[bu]#[buvsrg] -mapfile="+map_file.name,
+                result = subprocess.run(self.preprocessor + " " + wcnf_file.name + " preprocess -techniques=[bu]#[buvsrg] -mapfile="+map_file.name+" -timelimit=120 -timelimit 120 -skiptechnique=100",
                                         shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
                 # Obtain the preprocessed wcnf.
                 output    = result.stdout
                 self.old  = self.wcnf
                 self.wcnf = WCNF()
-                for line in output.splitlines():
-                    line = line.strip().replace("  ", " ")
+                for line in output.splitlines():                    
+                    line = line.strip().replace("  ", " ")                
                     if line and not line.startswith(('c', 'p')):                        
                         w, c = line.split(" ")[0], [int(x) for x in line.split(" ")[1:-1]]
                         if w == "h":

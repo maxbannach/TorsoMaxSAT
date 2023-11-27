@@ -44,11 +44,22 @@ class DPSolver(Solver):
     def conv2nogood(self,clause):
         return self.makeMask([-l for l in clause]), self.makeMask(clause, zero_as_false=False)
 
-    def solve(self):
+    def solve(self):         
         # compute a tree decomposition
         g = PrimalGraph(self.wcnf, twsolver = self.twsolver)
         #width, self.td, self.root = g.compute_tree_decomposition(heuristic="fillin")
-        width, self.td, self.root, self.nodes = g.compute_torso_decomposition()
+        torso = g.compute_torso_decomposition()
+        if torso is not None:
+            width, self.td, self.root, self.nodes  = torso
+        else:
+            # We did not find a good torso, fall back to subsolver.
+            print("c Unable to find a good torso.")
+            sub = solver_from_string(self.subsolver, self.wcnf, preprocessor = self.preprocessor, twsolver = self.twsolver, subsolver = self.subsolver)
+            sub.solve()
+            self.fitness    = sub.get_fitness()
+            self.assignment = sub.assignment
+            self.state      = sub.state
+            return
 
         # execute the dp
         t=self.dp(self.prepare_dp())

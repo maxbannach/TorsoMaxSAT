@@ -169,6 +169,8 @@ class PrimalGraph:
           - a tree decomposition of the graph, in which some part has the above mentioned width
           - a root node of the decomposition
           - a set of nodes that induce the torso
+          
+        May return None if no decent torso decomposition was found
         """
         print("c Computing a torso-decomposition.")
         
@@ -179,7 +181,14 @@ class PrimalGraph:
         # Complete the boarders of the torso into cliques.        
         h = nx.Graph(self.g)
         h.remove_nodes_from(torso_nodes)
+        n_cc = 0
         for c in nx.connected_components(h):
+            if len(c) == 1:
+                n_cc += 0.2
+            elif len(c) == 2:
+                n_cc += 0.5
+            else:
+                n_cc += 1
             for (u,v) in itertools.combinations(tms._neighbors_of_set_in(self.g, c, torso_nodes), 2):
                 torso_graph.add_edge(u, v)
 
@@ -189,7 +198,12 @@ class PrimalGraph:
         # Compute a tree decomposition of the torso.
         (width, td) = nx.algorithms.approximation.treewidth_min_fill_in(torso_graph)
         print(f"c ├─ Treewidth of the torso: {width:6}")
+        print(f"c ├─ Torso splits into {n_cc} components.")
         print( "c └─────────────────────────────────────")
+        
+        # Catch trivial cases-
+        if width > 10 or (n_cc > 0 and n_cc < 2):
+            return None
         
         # Compute the torso decomposition by adding the remaining components.
         torso_td = nx.Graph(td)
