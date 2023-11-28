@@ -14,6 +14,9 @@ def solver_from_string(cmd, wcnf, preprocessor = None, twsolver = None, subsolve
     elif cmd == "ortools":
         solver = ORSolver(wcnf,     preprocessor = preprocessor)
     elif cmd == "dp":
+        solver = VBSolver(wcnf,     preprocessor = preprocessor, subsolver = subsolver)
+        solver.twsolver = twsolver
+    elif cmd == "dpp":
         solver = DPSolver(wcnf,     preprocessor = preprocessor, subsolver = subsolver)
         solver.twsolver = twsolver
     else:
@@ -68,4 +71,5 @@ from .solver._hs       import HSSolver
 from .solver._fm       import FMSolver
 from .solver._ortools  import ORSolver
 from .solver._dp       import DPSolver
+from .solver._vb       import VBSolver
 from .solver._external import ExternalSolver
