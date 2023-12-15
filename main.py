@@ -4,7 +4,7 @@ from torsomaxsat import WCNF
 from torsomaxsat import PrimalGraph
 from torsomaxsat import State, solver_from_string
 
-__version__ = "0.0.1"
+__version__ = "1.0.0"
 __author__  = "Max Bannach and Markus Hecher"
 
 if __name__ == "__main__":
