@@ -27,7 +27,7 @@ xz -dc examples/<file>  | python main.py -s dp --subsolver rc2
 
 ## Use an External Treewidth Solver
 TorsoMaxSAT computes tree decompositions by default with [NetworkX](https://networkx.org).
-However, it supports external treewidth solvers that are that are compatible with the PACE format:
+However, it supports external treewidth solvers that are compatible with the PACE format:
 
 ```
 xz -cd examples/<file> | python main.py -s db --twsolver <cmd>
