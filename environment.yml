@@ -6,4 +6,5 @@ dependencies:
   - pyscipopt
   - matplotlib
   - pandas
-  - clingo
+  - conda-forge::clingo
+  - https://conda.anaconda.org/gurobi::gurobi
