@@ -78,7 +78,7 @@ Run the following command to see if the installation works as intended:
 python -m unittest -v
 ```
 
-# Citation
+# Reference
 
 If you use TorsoMaxSAT in your research, please cite the corresponding
 paper:
