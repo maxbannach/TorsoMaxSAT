@@ -78,3 +78,21 @@ Run the following command to see if the installation works as intended:
 python -m unittest -v
 ```
 
+# Citation
+
+If you use TorsoMaxSAT in your research, please cite the corresponding
+paper:
+
+```
+@inproceedings{BannachH24,
+  author       = {Max Bannach and
+                  Markus Hecher},
+  title        = {Structure-Guided Cube-and-Conquer for MaxSAT},
+  booktitle    = {{NASA} Formal Methods - 16th International Symposium, {NFM} 2024,
+                  Moffett Field, CA, USA, June 4-6, 2024, Proceedings},
+  pages        = {3--20},
+  year         = {2024},
+  doi          = {10.1007/978-3-031-60698-4\_1},
+}
+```
+
